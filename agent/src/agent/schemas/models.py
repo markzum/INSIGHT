@@ -12,7 +12,7 @@ import jsonschema
 from jsonschema import Draft202012Validator
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_DIR = Path(__file__).resolve().parents[2] / "schemas"
+SCHEMA_DIR = Path(__file__).resolve().parents[3] / "schemas"
 
 
 class Level(str, Enum):

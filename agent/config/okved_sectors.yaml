@@ -1,0 +1,89 @@
+# Справочник ОКВЭД2 → укрупнённый сектор.
+# Совпадение по самому длинному префиксу: новая отрасль добавляется сюда, без правки кода.
+# Префиксы не пересекаются по правилу «точный код или код + точка».
+
+sectors:
+  - id: agriculture
+    label: Сельское хозяйство
+    prefixes: ["01", "02", "03"]
+  - id: mining
+    label: Добыча полезных ископаемых
+    prefixes: ["05", "07", "08", "09"]
+  - id: fuel
+    label: Топливо и нефтепродукты
+    prefixes: ["06", "19", "46.71"]
+  - id: food
+    label: Пищевое производство
+    prefixes: ["10", "11"]
+  - id: metals
+    label: Металлургия и металлообработка
+    prefixes: ["24", "25"]
+  - id: manufacturing
+    label: Обрабатывающие производства
+    prefixes: ["12", "13", "14", "15", "16", "17", "18", "20", "21", "22", "23", "26", "27", "28", "29", "30", "31", "32", "33"]
+  - id: energy
+    label: Энергетика
+    prefixes: ["35"]
+  - id: water
+    label: Водоснабжение и утилизация
+    prefixes: ["36", "37", "38", "39"]
+  - id: construction
+    label: Строительство
+    prefixes: ["41", "42", "43"]
+  - id: auto_trade
+    label: Торговля автотранспортом
+    prefixes: ["45"]
+  - id: wholesale
+    label: Оптовая торговля
+    prefixes: ["46"]
+  - id: retail
+    label: Розничная торговля
+    prefixes: ["47"]
+  - id: transport
+    label: Транспорт и логистика
+    prefixes: ["49", "50", "51", "52", "53"]
+  - id: hotels
+    label: Гостиницы и общепит
+    prefixes: ["55", "56"]
+  - id: media
+    label: Медиа и связь
+    prefixes: ["58", "59", "60", "61"]
+  - id: it
+    label: Информационные технологии
+    prefixes: ["62", "63"]
+  - id: finance
+    label: Финансы
+    prefixes: ["64", "65", "66"]
+  - id: real_estate
+    label: Недвижимость
+    prefixes: ["68"]
+  - id: professional
+    label: Профессиональные услуги
+    prefixes: ["69", "70", "71", "72", "73", "74", "75"]
+  - id: admin
+    label: Административные услуги
+    prefixes: ["77", "78", "79", "80", "81", "82"]
+  - id: public
+    label: Государственное управление
+    prefixes: ["84"]
+  - id: education
+    label: Образование
+    prefixes: ["85"]
+  - id: health
+    label: Здравоохранение
+    prefixes: ["86", "87", "88"]
+  - id: culture
+    label: Культура и спорт
+    prefixes: ["90", "91", "92", "93"]
+  - id: other_services
+    label: Прочие услуги
+    prefixes: ["94", "95", "96"]
+  - id: households
+    label: Домашние хозяйства
+    prefixes: ["97", "98"]
+  - id: extraterritorial
+    label: Экстерриториальные организации
+    prefixes: ["99"]
+
+commodity_sectors: [agriculture, mining, fuel, metals]
+demand_sectors: [wholesale, retail, hotels, food]

@@ -1,0 +1,65 @@
+# Правила чувствительности. Новый фактор или ключевые слова добавляются здесь.
+# Итог скоринга ограничен 1. sensitivity_cap закрывает макрофактор (до 0.25)
+# и дополнительный продуктовый вклад (до 0.10) одним потолком 0.35.
+
+weights:
+  sector_client: 0.35
+  sector_counterparty: 0.15
+  region: 0.15
+
+sensitivity_cap: 0.35
+min_relevance: 0.05
+counterparty_limit: 5
+
+factors:
+  key_rate:
+    tags: [key_rate, monetary_policy]
+    keywords: ["ключев", "ставк", "банк россии", "денежно-кредит"]
+    effects:
+      rate_sensitivity: 0.25
+      deposit_benefit: 0.12
+      factoring_sensitivity: 0.08
+  fx:
+    tags: [fx, sanctions, logistics, trade]
+    keywords: ["курс", "валют", "доллар", "юан", "санкц", "вэд", "логист"]
+    effects:
+      fx_sensitivity: 0.25
+  labor:
+    tags: [labor]
+    keywords: ["рынок труда", "безработиц", "зарплат", "кадр", "персонал"]
+    effects:
+      labor_sensitivity: 0.20
+  inflation:
+    tags: [inflation]
+    keywords: ["инфляц"]
+    effects:
+      rate_sensitivity: 0.08
+      deposit_benefit: 0.05
+      demand_sensitivity: 0.08
+  commodities:
+    tags: [commodities, metals, fuel, agri]
+    keywords: ["сырь", "металл", "нефт", "золот", "пшениц", "угол"]
+    effects:
+      commodity_exposure: 0.15
+  consumption:
+    tags: [consumption, demand]
+    keywords: ["потреблен", "спрос", "рознич"]
+    effects:
+      demand_sensitivity: 0.12
+
+sector_keywords:
+  agriculture: ["зерн", "агро", "урожа"]
+  mining: ["добыч", "руда"]
+  fuel: ["топлив", "нефт", "бензин"]
+  food: ["пищев", "продукт питания"]
+  metals: ["метал"]
+  manufacturing: ["завод", "производств"]
+  energy: ["электроэнерг", "энергет"]
+  construction: ["строитель", "девелоп", "ипотек"]
+  wholesale: ["оптов"]
+  retail: ["рознич"]
+  transport: ["перевоз", "фрахт"]
+  it: ["программ", "софт"]
+  real_estate: ["недвижим", "аренд"]
+  finance: ["лизинг"]
+  hotels: ["гостиниц", "общепит"]
