@@ -120,6 +120,11 @@ class BankIndex:
         }
 
     @classmethod
+    def load(cls, path: Path) -> "BankIndex":
+        """Каталог .txt сейчас. PDF подключаются тем же методом позже."""
+        return cls.from_text_dir(path)
+
+    @classmethod
     def from_text_dir(cls, path: Path) -> "BankIndex":
         fragments: list[Fragment] = []
         if not path.is_dir():

@@ -9,6 +9,10 @@ class ClientNotFound(AgentError):
     """В справочнике нет такого SYNTHETIC_U."""
 
 
+class InsightNotFound(AgentError):
+    """Сохранённого инсайта с таким id нет."""
+
+
 class BudgetExceeded(AgentError):
     """Исчерпан лимит шагов, токенов, вызовов или времени."""
 

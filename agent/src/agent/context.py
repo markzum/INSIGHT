@@ -31,3 +31,4 @@ class ToolContext:
     rules: SensitivityRules
     budget: Budget
     steps: list[dict] = field(default_factory=list)
+    phase: str = "act"

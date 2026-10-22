@@ -312,6 +312,18 @@ def _estimate(messages: list[dict[str, str]]) -> int:
     return max(1, sum(len(item.get("content") or "") for item in messages) // 4)
 
 
+def default_plan(context: dict[str, Any]) -> dict[str, Any]:
+    return _mock_plan(context)
+
+
+def grounded_draft(context: dict[str, Any]) -> dict[str, Any]:
+    return _mock_analyze(context)
+
+
+def grounded_chat(context: dict[str, Any]) -> dict[str, Any]:
+    return _mock_chat(context)
+
+
 def _mock_plan(context: dict[str, Any]) -> dict[str, Any]:
     title = str(context.get("title") or "событие")
     indicator = context.get("indicator")
@@ -343,7 +355,12 @@ def _mock_plan(context: dict[str, Any]) -> dict[str, Any]:
 def _pick_features(context: dict[str, Any]) -> list[dict[str, Any]]:
     features = list(context.get("features") or [])
     by_id = {item["feature_id"]: item for item in features}
-    chosen = [by_id[feature_id] for feature_id in _FEATURE_ORDER if feature_id in by_id and by_id[feature_id].get("active")]
+    ordered: list[str] = []
+    for feature_id in list(context.get("matched_feature_ids") or []) + _FEATURE_ORDER:
+        feature = by_id.get(feature_id)
+        if feature and feature.get("active") and feature_id not in ordered:
+            ordered.append(feature_id)
+    chosen = [by_id[feature_id] for feature_id in ordered]
     if len(chosen) < 2:
         for feature in features:
             if feature not in chosen:

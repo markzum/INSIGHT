@@ -86,6 +86,7 @@ class ToolRegistry:
             {
                 "kind": "tool",
                 "name": name,
+                "phase": ctx.phase,
                 "args": safe_args,
                 "result_preview": _preview(result),
                 "started_at": datetime.now(timezone.utc).isoformat(),
