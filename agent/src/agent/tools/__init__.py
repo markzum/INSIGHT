@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent.bank_index import BankIndex
+from agent.bank_index import BankIndex, match_indicator
 from agent.context import ToolContext
 from agent.news_store import cluster_payload
 from agent.profile_features import build_profile
@@ -198,7 +198,25 @@ def search_bank_analytics(args: dict, ctx: ToolContext) -> dict:
 
 
 def get_macro_indicator(args: dict, ctx: ToolContext) -> dict:
-    return ctx.bank.macro(str(args["name"]))
+    result = ctx.bank.macro(str(args["name"]))
+    if result.get("found"):
+        return result
+    documents = [
+        {
+            "text": cluster.searchable_text(),
+            "source_id": f"news:{cluster.cluster_id}",
+            "title": cluster.title,
+            "published_at": cluster.published_at,
+            "kind": "news",
+            "doc_id": cluster.cluster_id,
+            "fragment_id": None,
+        }
+        for cluster in ctx.news.clusters
+    ]
+    from_news = match_indicator(str(args["name"]), documents)
+    if from_news.get("found"):
+        return from_news
+    return result
 
 
 def score_relevance_tool(args: dict, ctx: ToolContext) -> dict:

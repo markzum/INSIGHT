@@ -60,7 +60,7 @@ class AgentRuntime:
             settings=settings,
             directory=ClientDirectory(settings.clients_csv, settings.payments_csv, settings.persons_csv),
             news=NewsStore.load(settings.news_path),
-            bank=BankIndex.load(settings.bank_docs_dir),
+            bank=BankIndex.load(settings.bank_docs_dir, cache_dir=settings.index_cache),
             rules=SensitivityRules.load(),
             llm=LLMClient(settings),
             tools=build_registry(),

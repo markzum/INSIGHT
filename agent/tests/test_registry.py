@@ -92,7 +92,9 @@ def test_bank_search_and_score(ctx: ToolContext) -> None:
     assert "14%" in bank["hits"][0]["text"]
     assert bank["hits"][0]["source_id"].startswith("bank:")
     macro = registry.call("get_macro_indicator", {"name": "key_rate"}, ctx)
-    assert macro["found"] is False
+    assert macro["found"] is True
+    assert "14%" in macro["value_text"]
+    assert macro["value_text"] in bank["hits"][0]["text"]
     scored = registry.call("score_relevance", {"cluster_id": "clu_rate", "client_id": "C_IMPORT"}, ctx)
     assert scored["client_id"] == "C_LOAN"
     assert scored["score"] > 0
