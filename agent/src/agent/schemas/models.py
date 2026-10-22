@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
@@ -12,7 +13,7 @@ import jsonschema
 from jsonschema import Draft202012Validator
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_DIR = Path(__file__).resolve().parents[3] / "schemas"
+from agent.paths import find_root
 
 
 class Level(str, Enum):
@@ -159,12 +160,18 @@ class ChatRequest(StrictModel):
     role: str | None = None
 
 
-@lru_cache(maxsize=8)
-def load_json_schema(name: str) -> dict[str, Any]:
-    path = SCHEMA_DIR / name
+def schema_file(name: str) -> Path:
+    override = os.environ.get("AGENT_SCHEMA_DIR")
+    directory = Path(override) if override else find_root() / "schemas"
+    path = directory / name
     if not path.is_file():
         raise FileNotFoundError(f"Не найдена схема {path}")
-    return json.loads(path.read_text(encoding="utf-8"))
+    return path
+
+
+@lru_cache(maxsize=8)
+def load_json_schema(name: str) -> dict[str, Any]:
+    return json.loads(schema_file(name).read_text(encoding="utf-8"))
 
 
 def _validator(name: str) -> Draft202012Validator:

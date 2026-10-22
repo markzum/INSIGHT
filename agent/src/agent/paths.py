@@ -2,12 +2,25 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-PACKAGE_ROOT = Path(__file__).resolve().parents[2]
+
+def find_root() -> Path:
+    override = os.environ.get("AGENT_HOME")
+    if override:
+        return Path(override)
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "config" / "okved_sectors.yaml").is_file():
+            return parent
+    return here.parents[2]
+
+
+PACKAGE_ROOT = find_root()
 CONFIG_DIR = PACKAGE_ROOT / "config"
 SYNTHETIC_DIR = PACKAGE_ROOT / "data" / "synthetic"
 

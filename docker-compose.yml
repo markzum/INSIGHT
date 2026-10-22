@@ -1,0 +1,24 @@
+services:
+  agent:
+    build:
+      context: ./agent
+    ports:
+      - "8000:8000"
+    environment:
+      MOCK_LLM: "1"
+      AGENT_HOME: /app
+      AGENT_SCHEMA_DIR: /app/schemas
+      AGENT_CLIENTS_CSV: /data/df_Uid_data_hack.csv
+      AGENT_PAYMENTS_CSV: /data/df_Uid_payment_hack.csv
+      AGENT_PERSONS_CSV: /data/df_Fid_Uid_link_hack.csv
+      AGENT_BANK_DOCS_DIR: /data
+      AGENT_NEWS_PATH: /app/data/synthetic/clusters.jsonl
+      AGENT_DB_PATH: /var/lib/agent/agent.sqlite
+      AGENT_CACHE_DIR: /var/lib/agent/llm
+      AGENT_INDEX_CACHE: /var/lib/agent/index
+    volumes:
+      - ./:/data:ro
+      - agent_state:/var/lib/agent
+
+volumes:
+  agent_state:

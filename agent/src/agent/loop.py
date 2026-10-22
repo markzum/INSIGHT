@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -24,7 +25,10 @@ from agent.schemas.models import schema_errors
 from agent.settings import Settings
 from agent.tools import build_registry
 from agent.trace import TraceStore
+from agent.paths import SYNTHETIC_DIR
 from agent.verifier import check_chat, check_insight, next_action
+
+log = logging.getLogger("agent.loop")
 
 _HINTS = {
     "ceo": {"loan", "deposit", "guarantee", "leasing", "factoring", "rko", "fx_hedge", "payroll"},
@@ -56,10 +60,14 @@ class AgentRuntime:
 
     @classmethod
     def build(cls, settings: Settings) -> "AgentRuntime":
+        clients = _existing(settings.clients_csv, SYNTHETIC_DIR / "clients.csv")
+        payments = _existing(settings.payments_csv, SYNTHETIC_DIR / "payments.csv")
+        persons = _existing(settings.persons_csv, SYNTHETIC_DIR / "persons.csv")
+        news_path = _existing(settings.news_path, SYNTHETIC_DIR / "clusters.jsonl")
         return cls(
             settings=settings,
-            directory=ClientDirectory(settings.clients_csv, settings.payments_csv, settings.persons_csv),
-            news=NewsStore.load(settings.news_path),
+            directory=ClientDirectory(clients, payments, persons),
+            news=NewsStore.load(news_path),
             bank=BankIndex.load(settings.bank_docs_dir, cache_dir=settings.index_cache),
             rules=SensitivityRules.load(),
             llm=LLMClient(settings),
@@ -506,6 +514,13 @@ def _public_source(item: dict[str, Any]) -> dict[str, Any]:
         "url": item.get("url"),
         "published_at": item.get("published_at"),
     }
+
+
+def _existing(path, fallback):
+    if path.is_file() or path.is_dir():
+        return path
+    log.warning("путь %s не найден, используется %s", path, fallback)
+    return fallback
 
 
 def _visible_features(profile: Profile, role: str) -> list[dict[str, Any]]:
