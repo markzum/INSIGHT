@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://insight.local/schemas/insight.schema.json",
+  "title": "Insight",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "insight_id",
+    "client_id",
+    "cluster_id",
+    "generated_at",
+    "headline",
+    "type",
+    "urgency",
+    "impact",
+    "confidence",
+    "priority_score",
+    "what_happened",
+    "why_it_matters",
+    "consequences",
+    "actions",
+    "bank_view",
+    "sources",
+    "client_features_used",
+    "trace_id"
+  ],
+  "properties": {
+    "insight_id": { "type": "string", "minLength": 1 },
+    "client_id": { "type": "string", "minLength": 1 },
+    "cluster_id": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "headline": { "type": "string", "minLength": 1 },
+    "type": { "enum": ["risk", "opportunity", "mixed", "neutral"] },
+    "urgency": { "enum": ["high", "medium", "low"] },
+    "impact": { "enum": ["high", "medium", "low"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "priority_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "what_happened": { "$ref": "#/$defs/whatHappened" },
+    "why_it_matters": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/whyItem" }
+    },
+    "consequences": { "$ref": "#/$defs/consequences" },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/action" }
+    },
+    "bank_view": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/bankFragment" }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "client_features_used": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/clientFeature" }
+    },
+    "trace_id": { "type": "string", "minLength": 1 },
+    "gaps": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "sourceRef": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "whatHappened": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["facts", "assumptions"],
+      "properties": {
+        "facts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/fact" }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/assumption" }
+        }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "source_ids", "status"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "source_ids": { "$ref": "#/$defs/sourceRef" },
+        "status": { "const": "confirmed" }
+      }
+    },
+    "assumption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "source_ids", "status"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "source_ids": { "$ref": "#/$defs/sourceRef" },
+        "status": { "const": "unconfirmed" }
+      }
+    },
+    "whyItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "client_features", "source_ids"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "client_features": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "source_ids": { "$ref": "#/$defs/sourceRef" }
+      }
+    },
+    "consequences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risks", "opportunities", "factors_to_watch"],
+      "properties": {
+        "risks": { "type": "array", "items": { "$ref": "#/$defs/originClaim" } },
+        "opportunities": { "type": "array", "items": { "$ref": "#/$defs/originClaim" } },
+        "factors_to_watch": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "originClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "source_ids", "origin"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "source_ids": { "$ref": "#/$defs/sourceRef" },
+        "origin": { "enum": ["ai", "bank"] }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "rationale", "origin", "product_hint"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1 },
+        "origin": { "enum": ["ai", "bank"] },
+        "product_hint": {
+          "anyOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "bankFragment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "doc_id", "doc_title", "fragment_id"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "doc_id": { "type": "string", "minLength": 1 },
+        "doc_title": { "type": "string", "minLength": 1 },
+        "fragment_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "kind", "title", "url", "published_at"],
+      "properties": {
+        "source_id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["news", "bank_analytics", "client_profile"] },
+        "title": { "type": "string", "minLength": 1 },
+        "url": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "published_at": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+      }
+    },
+    "clientFeature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feature_id", "label", "value", "csv_field"],
+      "properties": {
+        "feature_id": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "value": { "type": "string" },
+        "csv_field": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

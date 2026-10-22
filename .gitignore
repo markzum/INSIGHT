@@ -1,0 +1,15 @@
+.env
+**/.env
+**/.venv
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.mypy_cache/
+**/*.sqlite
+**/*.sqlite3
+agent/data/cache/
+agent/data/index/
+
+# Данные кейса лежат в корне для локального запуска и не коммитятся.
+df_*.csv
+*.pdf
