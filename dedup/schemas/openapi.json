@@ -1,0 +1,565 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ИНСАЙТ dedup",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents": {
+      "post": {
+        "summary": "Add Document",
+        "operationId": "add_document_documents_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Document"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DedupResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/batch": {
+      "post": {
+        "summary": "Add Batch",
+        "operationId": "add_batch_batch_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Document"
+                },
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DedupResult"
+                  },
+                  "title": "Response Add Batch Batch Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clusters": {
+      "get": {
+        "summary": "List Clusters",
+        "operationId": "list_clusters_clusters_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DedupResult"
+                  },
+                  "title": "Response List Clusters Clusters Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clusters/{cluster_id}": {
+      "get": {
+        "summary": "Get Cluster",
+        "operationId": "get_cluster_clusters__cluster_id__get",
+        "parameters": [
+          {
+            "name": "cluster_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cluster Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DedupResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DedupResult": {
+        "properties": {
+          "canonical_id": {
+            "type": "string",
+            "title": "Canonical Id"
+          },
+          "cluster_id": {
+            "type": "string",
+            "title": "Cluster Id"
+          },
+          "cluster_version": {
+            "type": "integer",
+            "title": "Cluster Version"
+          },
+          "canonical_document": {
+            "$ref": "#/components/schemas/Document"
+          },
+          "duplicates": {
+            "items": {
+              "$ref": "#/components/schemas/DuplicateRef"
+            },
+            "type": "array",
+            "title": "Duplicates"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "identity",
+              "url",
+              "text_hash",
+              "near_duplicate"
+            ],
+            "title": "Method"
+          },
+          "similarity_score": {
+            "type": "number",
+            "title": "Similarity Score"
+          },
+          "provenance": {
+            "items": {
+              "$ref": "#/components/schemas/ProvenanceEdge"
+            },
+            "type": "array",
+            "title": "Provenance"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "confirmed_facts": {
+            "items": {},
+            "type": "array",
+            "title": "Confirmed Facts"
+          },
+          "bank_analysis": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Bank Analysis"
+          },
+          "model_inferences": {
+            "items": {},
+            "type": "array",
+            "title": "Model Inferences"
+          }
+        },
+        "type": "object",
+        "required": [
+          "canonical_id",
+          "cluster_id",
+          "cluster_version",
+          "canonical_document",
+          "duplicates",
+          "method",
+          "similarity_score",
+          "provenance"
+        ],
+        "title": "DedupResult"
+      },
+      "Document": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": ""
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "raw_meta": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Raw Meta"
+          },
+          "content_kind": {
+            "type": "string",
+            "enum": [
+              "external_news",
+              "bank_analysis"
+            ],
+            "title": "Content Kind",
+            "default": "external_news"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Document"
+      },
+      "DuplicateRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source"
+        ],
+        "title": "DuplicateRef"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ProvenanceEdge": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "matched_document_id": {
+            "type": "string",
+            "title": "Matched Document Id"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "identity",
+              "url",
+              "text_hash",
+              "near_duplicate"
+            ],
+            "title": "Method"
+          },
+          "similarity_score": {
+            "type": "number",
+            "title": "Similarity Score"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "features": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Features"
+          },
+          "algorithm_version": {
+            "type": "string",
+            "title": "Algorithm Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "matched_document_id",
+          "method",
+          "similarity_score",
+          "threshold",
+          "algorithm_version"
+        ],
+        "title": "ProvenanceEdge"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

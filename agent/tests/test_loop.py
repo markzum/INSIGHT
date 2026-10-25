@@ -1,7 +1,7 @@
 import pytest
 
 from agent.errors import ClientNotFound, InsightNotFound
-from agent.loop import AgentRuntime
+from agent.loop import AgentRuntime, _prepare_draft
 from agent.planner import plan_messages
 from agent.settings import Settings
 from agent.tools import build_registry
@@ -77,6 +77,20 @@ def test_chat_answers_with_origin_and_trace(runtime: AgentRuntime) -> None:
     assert any(step["kind"] == "tool" for step in trace["steps"])
     with pytest.raises(InsightNotFound):
         runtime.chat("missing", "вопрос")
+
+
+def test_prepare_draft_owns_id_score_and_source_kind() -> None:
+    draft = {
+        "impact": "high",
+        "urgency": "medium",
+        "confidence": "low",
+        "sources": [{"source_id": "bank:policy:1", "kind": "bank", "title": "Обзор"}],
+    }
+    _prepare_draft(draft, "ins_1", "tr_1", 0.8)
+    assert draft["insight_id"] == "ins_1"
+    assert draft["trace_id"] == "tr_1"
+    assert draft["sources"][0]["kind"] == "bank_analytics"
+    assert 0 <= draft["priority_score"] <= 1
 
 
 def test_plan_wraps_news_as_untrusted_data() -> None:

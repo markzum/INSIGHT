@@ -1,9 +1,25 @@
 services:
+  pipeline:
+    build:
+      context: ./gateway
+    environment:
+      PARSER_URL: http://parser:8002
+      DEDUP_URL: http://dedup:8001
+      DEDUP_TOKEN: demo-token
+      NEWS_PATH: /news/clusters.jsonl
+    volumes:
+      - news_data:/news
+    command: ["python", "-m", "gateway.pipeline"]
+    depends_on:
+      - parser
+      - dedup
+    restart: "no"
+
   agent:
     build:
       context: ./agent
     ports:
-      - "8000:8000"
+      - "8010:8000"
     environment:
       MOCK_LLM: "1"
       AGENT_HOME: /app
@@ -12,13 +28,69 @@ services:
       AGENT_PAYMENTS_CSV: /data/df_Uid_payment_hack.csv
       AGENT_PERSONS_CSV: /data/df_Fid_Uid_link_hack.csv
       AGENT_BANK_DOCS_DIR: /data
-      AGENT_NEWS_PATH: /app/data/synthetic/clusters.jsonl
+      AGENT_NEWS_PATH: /news/clusters.jsonl
       AGENT_DB_PATH: /var/lib/agent/agent.sqlite
       AGENT_CACHE_DIR: /var/lib/agent/llm
       AGENT_INDEX_CACHE: /var/lib/agent/index
     volumes:
       - ./:/data:ro
       - agent_state:/var/lib/agent
+      - news_data:/news:ro
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully
+
+  dedup:
+    build:
+      context: ./dedup
+    ports:
+      - "8001:8001"
+    environment:
+      DEDUP_DB: /var/lib/dedup/dedup.sqlite
+      DEDUP_API_KEYS: '{"demo-token":"demo"}'
+    volumes:
+      - dedup_state:/var/lib/dedup
+
+  parser:
+    build:
+      context: ./parser
+    ports:
+      - "8002:8002"
+    environment:
+      PARSER_HOME: /app
+      PARSER_OFFLINE: "1"
+      PARSER_DB: /var/lib/parser/parser.sqlite
+      PARSER_API_KEYS: '{"demo-token":"demo"}'
+    volumes:
+      - parser_state:/var/lib/parser
+
+  gateway:
+    build:
+      context: ./gateway
+    ports:
+      - "8080:8080"
+    environment:
+      AGENT_URL: http://agent:8000
+      GATEWAY_PERIOD_FROM: "2026-09-01"
+      GATEWAY_PERIOD_TO: "2026-10-31"
+      GATEWAY_TOP_N: "3"
+    depends_on:
+      - agent
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "127.0.0.1:4173:4173"
+    environment:
+      HOST: 0.0.0.0
+      ALFA_API_BASE: http://127.0.0.1:8080
+      ALFA_TIMEOUT_MS: "180000"
+    depends_on:
+      - gateway
 
 volumes:
   agent_state:
+  dedup_state:
+  parser_state:
+  news_data:

@@ -1,0 +1,49 @@
+{
+  "canonical_id": "a",
+  "cluster_id": "clu_9ddbdb106483",
+  "cluster_version": 2,
+  "canonical_document": {
+    "id": "a",
+    "source": "Издание",
+    "title": "Заголовок решения",
+    "text": "Совет директоров 11 сентября 2026 года сохранил показатель номер 5 на уровне 25 процента. рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок рынок",
+    "published_at": "2026-09-11T08:00:00Z",
+    "language": "ru",
+    "url": "https://rbc.ru/news/5",
+    "raw_meta": {
+      "entities": [
+        "сюжет"
+      ]
+    },
+    "content_kind": "external_news"
+  },
+  "duplicates": [
+    {
+      "id": "b",
+      "source": "Издание",
+      "url": "https://www.rbc.ru/news/5?utm_source=tg",
+      "published_at": "2026-09-11T09:00:00Z",
+      "title": "Заголовок решения"
+    }
+  ],
+  "method": "url",
+  "similarity_score": 1.0,
+  "provenance": [
+    {
+      "document_id": "b",
+      "matched_document_id": "a",
+      "method": "url",
+      "similarity_score": 1.0,
+      "threshold": 1.0,
+      "features": {
+        "cluster_policy": "complete_link",
+        "conflict": null
+      },
+      "algorithm_version": "1.0.0"
+    }
+  ],
+  "warnings": [],
+  "confirmed_facts": [],
+  "bank_analysis": [],
+  "model_inferences": []
+}

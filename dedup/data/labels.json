@@ -1,0 +1,402 @@
+{
+  "s0-anchor": {
+    "gold_cluster": "gold-0",
+    "relation": "anchor"
+  },
+  "s0-exact": {
+    "gold_cluster": "gold-0",
+    "relation": "exact"
+  },
+  "s0-near1": {
+    "gold_cluster": "gold-0",
+    "relation": "near"
+  },
+  "s0-near2": {
+    "gold_cluster": "gold-0",
+    "relation": "near"
+  },
+  "s1-anchor": {
+    "gold_cluster": "gold-1",
+    "relation": "anchor"
+  },
+  "s1-exact": {
+    "gold_cluster": "gold-1",
+    "relation": "exact"
+  },
+  "s1-near1": {
+    "gold_cluster": "gold-1",
+    "relation": "near"
+  },
+  "s1-near2": {
+    "gold_cluster": "gold-1",
+    "relation": "near"
+  },
+  "s2-anchor": {
+    "gold_cluster": "gold-2",
+    "relation": "anchor"
+  },
+  "s2-exact": {
+    "gold_cluster": "gold-2",
+    "relation": "exact"
+  },
+  "s2-near1": {
+    "gold_cluster": "gold-2",
+    "relation": "near"
+  },
+  "s2-near2": {
+    "gold_cluster": "gold-2",
+    "relation": "near"
+  },
+  "s3-anchor": {
+    "gold_cluster": "gold-3",
+    "relation": "anchor"
+  },
+  "s3-exact": {
+    "gold_cluster": "gold-3",
+    "relation": "exact"
+  },
+  "s3-near1": {
+    "gold_cluster": "gold-3",
+    "relation": "near"
+  },
+  "s3-near2": {
+    "gold_cluster": "gold-3",
+    "relation": "near"
+  },
+  "s4-anchor": {
+    "gold_cluster": "gold-4",
+    "relation": "anchor"
+  },
+  "s4-exact": {
+    "gold_cluster": "gold-4",
+    "relation": "exact"
+  },
+  "s4-near1": {
+    "gold_cluster": "gold-4",
+    "relation": "near"
+  },
+  "s4-near2": {
+    "gold_cluster": "gold-4",
+    "relation": "near"
+  },
+  "s5-anchor": {
+    "gold_cluster": "gold-5",
+    "relation": "anchor"
+  },
+  "s5-exact": {
+    "gold_cluster": "gold-5",
+    "relation": "exact"
+  },
+  "s5-near1": {
+    "gold_cluster": "gold-5",
+    "relation": "near"
+  },
+  "s5-near2": {
+    "gold_cluster": "gold-5",
+    "relation": "near"
+  },
+  "s6-anchor": {
+    "gold_cluster": "gold-6",
+    "relation": "anchor"
+  },
+  "s6-exact": {
+    "gold_cluster": "gold-6",
+    "relation": "exact"
+  },
+  "s6-near1": {
+    "gold_cluster": "gold-6",
+    "relation": "near"
+  },
+  "s6-near2": {
+    "gold_cluster": "gold-6",
+    "relation": "near"
+  },
+  "s7-anchor": {
+    "gold_cluster": "gold-7",
+    "relation": "anchor"
+  },
+  "s7-exact": {
+    "gold_cluster": "gold-7",
+    "relation": "exact"
+  },
+  "s7-near1": {
+    "gold_cluster": "gold-7",
+    "relation": "near"
+  },
+  "s7-near2": {
+    "gold_cluster": "gold-7",
+    "relation": "near"
+  },
+  "s8-anchor": {
+    "gold_cluster": "gold-8",
+    "relation": "anchor"
+  },
+  "s8-exact": {
+    "gold_cluster": "gold-8",
+    "relation": "exact"
+  },
+  "s8-near1": {
+    "gold_cluster": "gold-8",
+    "relation": "near"
+  },
+  "s8-near2": {
+    "gold_cluster": "gold-8",
+    "relation": "near"
+  },
+  "s9-anchor": {
+    "gold_cluster": "gold-9",
+    "relation": "anchor"
+  },
+  "s9-exact": {
+    "gold_cluster": "gold-9",
+    "relation": "exact"
+  },
+  "s9-near1": {
+    "gold_cluster": "gold-9",
+    "relation": "near"
+  },
+  "s9-near2": {
+    "gold_cluster": "gold-9",
+    "relation": "near"
+  },
+  "s10-anchor": {
+    "gold_cluster": "gold-10",
+    "relation": "anchor"
+  },
+  "s10-exact": {
+    "gold_cluster": "gold-10",
+    "relation": "exact"
+  },
+  "s10-near1": {
+    "gold_cluster": "gold-10",
+    "relation": "near"
+  },
+  "s10-near2": {
+    "gold_cluster": "gold-10",
+    "relation": "near"
+  },
+  "s11-anchor": {
+    "gold_cluster": "gold-11",
+    "relation": "anchor"
+  },
+  "s11-exact": {
+    "gold_cluster": "gold-11",
+    "relation": "exact"
+  },
+  "s11-near1": {
+    "gold_cluster": "gold-11",
+    "relation": "near"
+  },
+  "s11-near2": {
+    "gold_cluster": "gold-11",
+    "relation": "near"
+  },
+  "s12-anchor": {
+    "gold_cluster": "gold-12",
+    "relation": "anchor"
+  },
+  "s12-exact1": {
+    "gold_cluster": "gold-12",
+    "relation": "exact"
+  },
+  "s12-exact2": {
+    "gold_cluster": "gold-12",
+    "relation": "exact"
+  },
+  "s13-anchor": {
+    "gold_cluster": "gold-13",
+    "relation": "anchor"
+  },
+  "s13-exact1": {
+    "gold_cluster": "gold-13",
+    "relation": "exact"
+  },
+  "s13-exact2": {
+    "gold_cluster": "gold-13",
+    "relation": "exact"
+  },
+  "s14-anchor": {
+    "gold_cluster": "gold-14",
+    "relation": "anchor"
+  },
+  "s14-exact1": {
+    "gold_cluster": "gold-14",
+    "relation": "exact"
+  },
+  "s14-exact2": {
+    "gold_cluster": "gold-14",
+    "relation": "exact"
+  },
+  "s15-anchor": {
+    "gold_cluster": "gold-15",
+    "relation": "anchor"
+  },
+  "s15-exact1": {
+    "gold_cluster": "gold-15",
+    "relation": "exact"
+  },
+  "s15-exact2": {
+    "gold_cluster": "gold-15",
+    "relation": "exact"
+  },
+  "s16-anchor": {
+    "gold_cluster": "gold-16",
+    "relation": "anchor"
+  },
+  "s16-exact1": {
+    "gold_cluster": "gold-16",
+    "relation": "exact"
+  },
+  "s16-exact2": {
+    "gold_cluster": "gold-16",
+    "relation": "exact"
+  },
+  "s17-anchor": {
+    "gold_cluster": "gold-17",
+    "relation": "anchor"
+  },
+  "s17-exact1": {
+    "gold_cluster": "gold-17",
+    "relation": "exact"
+  },
+  "s17-exact2": {
+    "gold_cluster": "gold-17",
+    "relation": "exact"
+  },
+  "s18-anchor": {
+    "gold_cluster": "gold-18",
+    "relation": "anchor"
+  },
+  "s18-exact1": {
+    "gold_cluster": "gold-18",
+    "relation": "exact"
+  },
+  "s18-exact2": {
+    "gold_cluster": "gold-18",
+    "relation": "exact"
+  },
+  "s19-anchor": {
+    "gold_cluster": "gold-19",
+    "relation": "anchor"
+  },
+  "s19-exact1": {
+    "gold_cluster": "gold-19",
+    "relation": "exact"
+  },
+  "s19-exact2": {
+    "gold_cluster": "gold-19",
+    "relation": "exact"
+  },
+  "trap-0": {
+    "gold_cluster": "trap-0",
+    "relation": "singleton"
+  },
+  "trap-1": {
+    "gold_cluster": "trap-1",
+    "relation": "singleton"
+  },
+  "trap-2": {
+    "gold_cluster": "trap-2",
+    "relation": "singleton"
+  },
+  "trap-3": {
+    "gold_cluster": "trap-3",
+    "relation": "singleton"
+  },
+  "bank-0": {
+    "gold_cluster": "bank-0",
+    "relation": "singleton"
+  },
+  "bank-1": {
+    "gold_cluster": "bank-1",
+    "relation": "singleton"
+  },
+  "bank-2": {
+    "gold_cluster": "bank-2",
+    "relation": "singleton"
+  },
+  "bank-3": {
+    "gold_cluster": "bank-3",
+    "relation": "singleton"
+  },
+  "bank-4": {
+    "gold_cluster": "bank-4",
+    "relation": "singleton"
+  },
+  "bank-5": {
+    "gold_cluster": "bank-5",
+    "relation": "singleton"
+  },
+  "empty-0": {
+    "gold_cluster": "empty-0",
+    "relation": "singleton"
+  },
+  "empty-1": {
+    "gold_cluster": "empty-1",
+    "relation": "singleton"
+  },
+  "empty-2": {
+    "gold_cluster": "empty-2",
+    "relation": "singleton"
+  },
+  "empty-3": {
+    "gold_cluster": "empty-3",
+    "relation": "singleton"
+  },
+  "empty-4": {
+    "gold_cluster": "empty-4",
+    "relation": "singleton"
+  },
+  "empty-5": {
+    "gold_cluster": "empty-5",
+    "relation": "singleton"
+  },
+  "empty-6": {
+    "gold_cluster": "empty-6",
+    "relation": "singleton"
+  },
+  "empty-7": {
+    "gold_cluster": "empty-7",
+    "relation": "singleton"
+  },
+  "short-0": {
+    "gold_cluster": "short-0",
+    "relation": "singleton"
+  },
+  "short-1": {
+    "gold_cluster": "short-1",
+    "relation": "singleton"
+  },
+  "short-2": {
+    "gold_cluster": "short-2",
+    "relation": "singleton"
+  },
+  "short-3": {
+    "gold_cluster": "short-3",
+    "relation": "singleton"
+  },
+  "solo-0": {
+    "gold_cluster": "solo-0",
+    "relation": "singleton"
+  },
+  "solo-1": {
+    "gold_cluster": "solo-1",
+    "relation": "singleton"
+  },
+  "solo-2": {
+    "gold_cluster": "solo-2",
+    "relation": "singleton"
+  },
+  "solo-3": {
+    "gold_cluster": "solo-3",
+    "relation": "singleton"
+  },
+  "solo-4": {
+    "gold_cluster": "solo-4",
+    "relation": "singleton"
+  },
+  "solo-en": {
+    "gold_cluster": "solo-en",
+    "relation": "singleton"
+  }
+}

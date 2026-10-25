@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f5f7">
+  <meta name="description" content="Бизнес-пульс: демонстрация персональной новостной аналитики для крупного бизнеса.">
+  <title>Бизнес-пульс · Альфа-Бизнес</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <a href="#main" class="skip-link">Перейти к содержимому</a>
+  <aside class="sidebar" aria-label="Рабочее пространство">
+    <a class="brand" href="#overview" aria-label="Альфа-Бизнес — обзор"><span class="brand-mark">А</span><span>Альфа-Бизнес<small>ДЛЯ КРУПНОГО БИЗНЕСА</small></span></a>
+    <div class="nav-caption">ВАШ БИЗНЕС</div>
+    <nav id="navigation" aria-label="Основная навигация"></nav>
+    <div class="sidebar-bottom"><div class="demo-stamp"><span></span> Пространство демо</div><p>Вымышленные компании.<br>Реальные возможности интерфейса.</p><button class="text-button" data-action="about">Как устроено демо <span aria-hidden="true">↗</span></button></div>
+    <div class="user-profile"><span class="avatar">ДП</span><div>Демо-пользователь<small>Рабочее пространство</small></div></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><div class="context-select"><span class="company-symbol" aria-hidden="true">◫</span><label><span class="sr-only">Компания</span><select id="company-select" aria-label="Компания"><option>Загрузка компаний…</option></select></label><span class="demo-badge">ДЕМО</span></div><label class="role-select"><span>Моя роль</span><select id="role-select" aria-label="Моя роль"><option value="financial_director">Финансовый директор</option><option value="ceo">Генеральный директор</option><option value="treasurer">Казначей</option></select></label></header>
+    <main id="main" tabindex="-1" aria-busy="true"><div class="initial-loading" role="status">Загружаем демонстрационный профиль…</div></main>
+    <footer>Учебный прототип · Вымышленные данные · Не является действующим сервисом Альфа-Банка</footer>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <dialog id="modal" aria-labelledby="modal-title"><div class="modal-head"><h2 id="modal-title"></h2><button class="icon-button" data-action="close-modal" aria-label="Закрыть окно">×</button></div><div id="modal-body"></div></dialog>
+  <noscript>Для работы интерактивного прототипа включите JavaScript в браузере.</noscript>
+  <script src="data/demo-data.js"></script>
+  <script src="assets/config.js"></script>
+  <script src="assets/model.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

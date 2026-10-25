@@ -8,13 +8,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     AGENT_SCHEMA_DIR=/app/schemas \
     MOCK_LLM=1
 
-COPY pyproject.toml README.md ./
+COPY requirements.lock pyproject.toml README.md ./
 COPY src ./src
 COPY schemas ./schemas
 COPY config ./config
 COPY data/synthetic ./data/synthetic
 
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir -r requirements.lock \
+    && pip install --no-cache-dir --no-deps .
 
 EXPOSE 8000
 CMD ["uvicorn", "agent.api:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

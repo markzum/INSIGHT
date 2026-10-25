@@ -1,0 +1,261 @@
+{
+  "$defs": {
+    "Document": {
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "source": {
+          "default": "",
+          "title": "Source",
+          "type": "string"
+        },
+        "title": {
+          "default": "",
+          "title": "Title",
+          "type": "string"
+        },
+        "text": {
+          "default": "",
+          "title": "Text",
+          "type": "string"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Published At"
+        },
+        "language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Language"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "raw_meta": {
+          "additionalProperties": true,
+          "title": "Raw Meta",
+          "type": "object"
+        },
+        "content_kind": {
+          "default": "external_news",
+          "enum": [
+            "external_news",
+            "bank_analysis"
+          ],
+          "title": "Content Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "title": "Document",
+      "type": "object"
+    },
+    "DuplicateRef": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Published At"
+        },
+        "title": {
+          "default": "",
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "source"
+      ],
+      "title": "DuplicateRef",
+      "type": "object"
+    },
+    "ProvenanceEdge": {
+      "properties": {
+        "document_id": {
+          "title": "Document Id",
+          "type": "string"
+        },
+        "matched_document_id": {
+          "title": "Matched Document Id",
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "identity",
+            "url",
+            "text_hash",
+            "near_duplicate"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "similarity_score": {
+          "title": "Similarity Score",
+          "type": "number"
+        },
+        "threshold": {
+          "title": "Threshold",
+          "type": "number"
+        },
+        "features": {
+          "additionalProperties": true,
+          "title": "Features",
+          "type": "object"
+        },
+        "algorithm_version": {
+          "title": "Algorithm Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "document_id",
+        "matched_document_id",
+        "method",
+        "similarity_score",
+        "threshold",
+        "algorithm_version"
+      ],
+      "title": "ProvenanceEdge",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "canonical_id": {
+      "title": "Canonical Id",
+      "type": "string"
+    },
+    "cluster_id": {
+      "title": "Cluster Id",
+      "type": "string"
+    },
+    "cluster_version": {
+      "title": "Cluster Version",
+      "type": "integer"
+    },
+    "canonical_document": {
+      "$ref": "#/$defs/Document"
+    },
+    "duplicates": {
+      "items": {
+        "$ref": "#/$defs/DuplicateRef"
+      },
+      "title": "Duplicates",
+      "type": "array"
+    },
+    "method": {
+      "enum": [
+        "identity",
+        "url",
+        "text_hash",
+        "near_duplicate"
+      ],
+      "title": "Method",
+      "type": "string"
+    },
+    "similarity_score": {
+      "title": "Similarity Score",
+      "type": "number"
+    },
+    "provenance": {
+      "items": {
+        "$ref": "#/$defs/ProvenanceEdge"
+      },
+      "title": "Provenance",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    },
+    "confirmed_facts": {
+      "items": {},
+      "title": "Confirmed Facts",
+      "type": "array"
+    },
+    "bank_analysis": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Bank Analysis",
+      "type": "array"
+    },
+    "model_inferences": {
+      "items": {},
+      "title": "Model Inferences",
+      "type": "array"
+    }
+  },
+  "required": [
+    "canonical_id",
+    "cluster_id",
+    "cluster_version",
+    "canonical_document",
+    "duplicates",
+    "method",
+    "similarity_score",
+    "provenance"
+  ],
+  "title": "DedupResult",
+  "type": "object"
+}

@@ -1,0 +1,79 @@
+{
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "source": {
+      "default": "",
+      "title": "Source",
+      "type": "string"
+    },
+    "title": {
+      "default": "",
+      "title": "Title",
+      "type": "string"
+    },
+    "text": {
+      "default": "",
+      "title": "Text",
+      "type": "string"
+    },
+    "published_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Published At"
+    },
+    "language": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Language"
+    },
+    "url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Url"
+    },
+    "raw_meta": {
+      "additionalProperties": true,
+      "title": "Raw Meta",
+      "type": "object"
+    },
+    "content_kind": {
+      "default": "external_news",
+      "enum": [
+        "external_news",
+        "bank_analysis"
+      ],
+      "title": "Content Kind",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "title": "ParsedDocument",
+  "type": "object"
+}

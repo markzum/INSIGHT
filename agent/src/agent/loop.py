@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+
+import httpx
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any
@@ -29,6 +31,38 @@ from agent.paths import SYNTHETIC_DIR
 from agent.verifier import check_chat, check_insight, next_action
 
 log = logging.getLogger("agent.loop")
+
+_OUTPUT_SHAPE = {
+    "headline": "короткий заголовок",
+    "type": "risk",
+    "urgency": "medium",
+    "impact": "medium",
+    "confidence": "low",
+    "priority_score": 0.2,
+    "what_happened": {
+        "facts": [{"text": "факт из новости", "source_ids": ["news:cluster"], "status": "confirmed"}],
+        "assumptions": [],
+    },
+    "why_it_matters": [
+        {
+            "text": "почему это важно этой компании",
+            "client_features": ["feature_id"],
+            "source_ids": ["profile:client", "news:cluster"],
+        }
+    ],
+    "consequences": {
+        "risks": [{"text": "риск", "source_ids": ["news:cluster"], "origin": "ai"}],
+        "opportunities": [],
+        "factors_to_watch": ["что проверить"],
+    },
+    "actions": [{"text": "что сделать", "rationale": "зачем", "origin": "ai", "product_hint": None}],
+    "bank_view": [],
+    "sources": [
+        {"source_id": "news:cluster", "kind": "news", "title": "заголовок", "url": None, "published_at": None}
+    ],
+    "client_features_used": [{"feature_id": "feature_id", "label": "название", "value": "значение", "csv_field": "поле"}],
+    "gaps": [],
+}
 
 _HINTS = {
     "ceo": {"loan", "deposit", "guarantee", "leasing", "factoring", "rko", "fx_hedge", "payroll"},
@@ -132,6 +166,7 @@ class AgentRuntime:
         verifications = []
         bank_searched_again = False
         for iteration in range(self.settings.max_iters + 1):
+            _prepare_draft(draft, insight_id, trace_id, score.score)
             issues = check_insight(
                 draft,
                 allowed_sources={key: value["text"] for key, value in sources.items()},
@@ -163,19 +198,15 @@ class AgentRuntime:
                 draft_context["critique"] = issues + critic_issues
                 draft = self._analyze(ctx, cluster, visible, fragments, draft_context, critique=issues + critic_issues)
                 drafts.append(draft)
-            except BudgetExceeded:
+            except (BudgetExceeded, httpx.HTTPError):
                 draft = _give_up(draft, draft_context, [{"code": "budget", "detail": "лимит шагов или токенов"}])
                 drafts.append(draft)
                 verifications.append({"iteration": iteration, "issues": [{"code": "budget", "detail": "лимит"}], "decision": "give_up_low_confidence"})
                 break
-        draft["priority_score"] = priority_score(score.score, draft["impact"], draft["urgency"], draft["confidence"])
-        draft["insight_id"] = insight_id
-        draft["trace_id"] = trace_id
+        _prepare_draft(draft, insight_id, trace_id, score.score)
         if schema_errors(draft, "insight.schema.json"):
             draft = _give_up(grounded_draft(draft_context), draft_context, [{"code": "schema", "detail": "черновик не сошёлся со схемой"}])
-            draft["priority_score"] = priority_score(score.score, draft["impact"], draft["urgency"], "low")
-            draft["insight_id"] = insight_id
-            draft["trace_id"] = trace_id
+            _prepare_draft(draft, insight_id, trace_id, score.score)
             draft["generated_at"] = _now()
         self.traces.save_insight(draft)
         self.traces.save_trace(
@@ -259,7 +290,7 @@ class AgentRuntime:
                     bank_fragments=fragments,
                 )
                 action = "ok" if not issues else "give_up_low_confidence"
-            except BudgetExceeded:
+            except (BudgetExceeded, httpx.HTTPError):
                 action = "give_up_low_confidence"
         if action != "ok":
             answer = grounded_chat(context)
@@ -321,7 +352,7 @@ class AgentRuntime:
                 budget=ctx.budget,
                 mock_context=fallback_context,
             )
-        except BudgetExceeded:
+        except (BudgetExceeded, httpx.HTTPError):
             parsed, result = default_fallback_result(fallback_context)
         plan, fallback = coerce_plan(parsed, self.tools, fallback_context)
         self._mark(ctx, "plan", plan, model=result.model, tokens=result.prompt_tokens + result.completion_tokens)
@@ -399,6 +430,8 @@ class AgentRuntime:
                 "role": "user",
                 "content": json.dumps(
                     {
+                        "output_shape": _OUTPUT_SHAPE,
+                        "allowed_source_ids": [item["source_id"] for item in draft_context.get("sources") or []],
                         "features": features,
                         "bank_fragments": fragments,
                         "cluster": wrap_untrusted("news", cluster.summary or cluster.title),
@@ -417,7 +450,7 @@ class AgentRuntime:
                 mock_context=draft_context,
             )
             self._mark(ctx, "analyze", {"headline": (parsed or {}).get("headline")}, model=result.model, tokens=result.prompt_tokens + result.completion_tokens)
-        except BudgetExceeded:
+        except (BudgetExceeded, httpx.HTTPError):
             parsed = None
         if not parsed:
             parsed = grounded_draft(draft_context)
@@ -443,8 +476,8 @@ class AgentRuntime:
                 budget=ctx.budget,
                 mock_context={"draft": draft, "bank_searched_again": bank_searched_again},
             )
-        except BudgetExceeded:
-            return "give_up_low_confidence", [{"code": "budget", "detail": "лимит на шаге проверки"}]
+        except (BudgetExceeded, httpx.HTTPError):
+            return "give_up_low_confidence", [{"code": "budget", "detail": "лимит или таймаут на шаге проверки"}]
         self._mark(
             ctx,
             "critic",
@@ -478,7 +511,7 @@ class AgentRuntime:
                 mock_context=context,
             )
             self._mark(ctx, "chat", {"ok": bool(parsed)}, model=result.model, tokens=result.prompt_tokens + result.completion_tokens)
-        except BudgetExceeded:
+        except (BudgetExceeded, httpx.HTTPError):
             parsed = None
         if not parsed:
             parsed = grounded_chat(context)
@@ -487,6 +520,7 @@ class AgentRuntime:
         parsed["question"] = question
         parsed["trace_id"] = ctx.session.trace_id
         parsed["sources"] = [_public_source(item) for item in (parsed.get("sources") or context.get("sources") or [])]
+        _normalize_kinds(parsed)
         return parsed
 
     def _mark(self, ctx: ToolContext, name: str, payload: dict, model: str | None = None, tokens: int = 0) -> None:
@@ -561,6 +595,36 @@ def _absorb_cluster(cluster: NewsCluster, sources: dict[str, dict[str, Any]]) ->
             "published_at": article.published_at,
             "text": article.text,
         }
+
+
+_KIND_ALIASES = {
+    "bank": "bank_analytics",
+    "bank_analysis": "bank_analytics",
+    "news_article": "news",
+    "article": "news",
+    "profile": "client_profile",
+    "client": "client_profile",
+}
+_LEVELS = {"high", "medium", "low"}
+
+
+def _prepare_draft(draft: dict[str, Any], insight_id: str, trace_id: str, relevance: float) -> None:
+    """Поля, которыми владеет цикл, а не модель: иначе первая проверка схемы всегда падает."""
+    draft["insight_id"] = insight_id
+    draft["trace_id"] = trace_id
+    impact = draft.get("impact") if draft.get("impact") in _LEVELS else "low"
+    urgency = draft.get("urgency") if draft.get("urgency") in _LEVELS else "low"
+    confidence = draft.get("confidence") if draft.get("confidence") in _LEVELS else "low"
+    draft["priority_score"] = priority_score(relevance, impact, urgency, confidence)
+    _normalize_kinds(draft)
+
+
+def _normalize_kinds(payload: dict[str, Any]) -> None:
+    for source in payload.get("sources") or []:
+        if not isinstance(source, dict):
+            continue
+        kind = str(source.get("kind") or "")
+        source["kind"] = _KIND_ALIASES.get(kind, kind)
 
 
 def _give_up(draft: dict[str, Any], context: dict[str, Any], issues: list[dict]) -> dict[str, Any]:

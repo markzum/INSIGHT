@@ -1,0 +1,48 @@
+# Новая лента добавляется сюда. hosts — имена, с которых можно забирать и ленту, и полный текст.
+# fixture читается при PARSER_OFFLINE=1. В сетевом режиме пустой url пропускается.
+
+feeds:
+  - id: rbc
+    source: РБК
+    kind: external_news
+    url: https://rssexport.rbc.ru/rbcnews/news/30/full.rss
+    hosts: [rssexport.rbc.ru, rbc.ru]
+    fixture: fixtures/rbc.xml
+    fetch_body: true
+  - id: kommersant
+    source: Коммерсантъ
+    kind: external_news
+    url: https://www.kommersant.ru/rss/news.xml
+    hosts: [kommersant.ru]
+    fetch_body: true
+  - id: tass
+    source: ТАСС
+    kind: external_news
+    url: https://tass.ru/rss/v2.xml
+    hosts: [tass.ru]
+    fetch_body: true
+  - id: interfax
+    source: Интерфакс
+    kind: external_news
+    url: https://www.interfax.ru/rss
+    hosts: [interfax.ru]
+    fetch_body: true
+  - id: cbr
+    source: Банк России
+    kind: external_news
+    url: https://www.cbr.ru/rss/RssPress
+    hosts: [cbr.ru]
+    fetch_body: true
+  - id: alfa
+    source: Альфа-Банк
+    kind: bank_analysis
+    url: ""
+    hosts: [alfabank.ru]
+    fixture: fixtures/alfa.xml
+    fetch_body: false
+
+local_dirs:
+  - id: alfa-files
+    source: Альфа-Банк
+    kind: bank_analysis
+    path: fixtures/bank

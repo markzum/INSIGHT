@@ -1,0 +1,22 @@
+{
+  "documents": 100,
+  "clusters": 48,
+  "true_positive": 96,
+  "false_positive": 0,
+  "false_negative": 0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
+  "exact_pairs": 36,
+  "exact_recalled": 36,
+  "near_pairs": 60,
+  "near_recalled": 60,
+  "hidden_share": 0.52,
+  "cluster_sizes": {
+    "4": 12,
+    "1": 28,
+    "3": 8
+  },
+  "false_positive_examples": [],
+  "false_negative_examples": []
+}

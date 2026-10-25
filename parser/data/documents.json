@@ -1,0 +1,121 @@
+[
+  {
+    "id": "news-59eb372f5fc2b8fb",
+    "source": "Альфа-Банк",
+    "title": "Инфляция остаётся высокой",
+    "text": "Аналитики Альфа-Банка отмечают, что инфляция в сентябре 2026 года держится выше ориентира. Оценка относится к материалам банка, а не к ленте новостей.",
+    "published_at": "2026-09-12T06:00:00Z",
+    "language": "ru",
+    "url": "https://alfabank.ru/research/inflation-2026-09",
+    "raw_meta": {
+      "feed_id": "alfa",
+      "guid": "alfa-inflation-2026-09",
+      "warnings": [],
+      "tags": [
+        "inflation"
+      ],
+      "entities": [
+        "Альфа-Банк"
+      ],
+      "key_facts": [
+        "Аналитики Альфа-Банка отмечают, что инфляция в сентябре 2026 года держится выше ориентира."
+      ]
+    },
+    "content_kind": "bank_analysis"
+  },
+  {
+    "id": "news-80cae5ce5ee1683d",
+    "source": "РБК",
+    "title": "Коротко",
+    "text": "",
+    "published_at": "2026-09-11T10:00:00Z",
+    "language": null,
+    "url": "https://rbc.ru/short/1",
+    "raw_meta": {
+      "feed_id": "rbc",
+      "guid": "rbc-short-1",
+      "warnings": [
+        "пустой текст"
+      ],
+      "tags": [],
+      "entities": [],
+      "key_facts": [],
+      "original_url": "https://www.rbc.ru/short/1"
+    },
+    "content_kind": "external_news"
+  },
+  {
+    "id": "news-8a5432eff62921c3",
+    "source": "РБК",
+    "title": "Банк России сохранил ключевую ставку",
+    "text": "«Совет директоров» Банка России 11 сентября 2026 года сохранил ключевую ставку на уровне 14% годовых. Это решение опубликовано после планового заседания.",
+    "published_at": "2026-09-11T08:00:00Z",
+    "language": "ru",
+    "url": "https://rbc.ru/economics/11/09/2026/rate",
+    "raw_meta": {
+      "feed_id": "rbc",
+      "guid": "rbc-rate-2026-09-11",
+      "warnings": [],
+      "tags": [
+        "key_rate"
+      ],
+      "entities": [
+        "Банк России",
+        "Совет директоров"
+      ],
+      "key_facts": [
+        "«Совет директоров» Банка России 11 сентября 2026 года сохранил ключевую ставку на уровне 14% годовых."
+      ],
+      "original_url": "https://www.rbc.ru/economics/11/09/2026/rate?utm_source=rss"
+    },
+    "content_kind": "external_news"
+  },
+  {
+    "id": "news-aaab0ddd5158bb9f",
+    "source": "РБК",
+    "title": "Курс юаня вырос",
+    "text": "Курс китайской валюты вырос на 3% за неделю. Компании следят за расчетами в юанях.",
+    "published_at": "2026-09-11T09:00:00Z",
+    "language": "ru",
+    "url": "https://rbc.ru/economics/11/09/2026/yuan",
+    "raw_meta": {
+      "feed_id": "rbc",
+      "guid": "rbc-yuan-2026-09-11",
+      "warnings": [],
+      "tags": [
+        "fx"
+      ],
+      "entities": [],
+      "key_facts": [
+        "Курс китайской валюты вырос на 3% за неделю."
+      ],
+      "original_url": "https://www.rbc.ru/economics/11/09/2026/yuan"
+    },
+    "content_kind": "external_news"
+  },
+  {
+    "id": "news-ac251f925c9c2baf",
+    "source": "Альфа-Банк",
+    "title": "Сохранение ключевой ставки",
+    "text": "Альфа-Банк: Банк России 11 сентября 2026 года сохранил ключевую ставку на уровне 14% годовых. Для компаний с кредитами стоимость денег в этом решении не снижается.",
+    "published_at": "2026-09-11T08:00:00Z",
+    "language": "ru",
+    "url": null,
+    "raw_meta": {
+      "feed_id": "alfa-files",
+      "guid": "alfa-files:rate.txt",
+      "warnings": [],
+      "tags": [
+        "key_rate"
+      ],
+      "entities": [
+        "Банк России",
+        "Альфа-Банк"
+      ],
+      "key_facts": [
+        "Альфа-Банк: Банк России 11 сентября 2026 года сохранил ключевую ставку на уровне 14% годовых."
+      ]
+    },
+    "content_kind": "bank_analysis"
+  }
+]

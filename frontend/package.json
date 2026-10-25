@@ -1,0 +1,8 @@
+{
+  "name": "alfa-business-pulse",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Accessible, clearly labeled frontend demonstration of personalized business news",
+  "scripts": {"start":"node scripts/local.cjs start", "stop":"node scripts/local.cjs stop", "status":"node scripts/local.cjs status", "dev":"node scripts/serve.cjs", "build":"node scripts/build.cjs", "test":"node --test tests/*.test.cjs"},
+  "engines": {"node": ">=22"}
+}

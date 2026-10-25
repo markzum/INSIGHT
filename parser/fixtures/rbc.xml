@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>РБК</title>
+    <item>
+      <title>Банк России сохранил ключевую ставку</title>
+      <link>https://www.rbc.ru/economics/11/09/2026/rate?utm_source=rss</link>
+      <guid>rbc-rate-2026-09-11</guid>
+      <pubDate>Fri, 11 Sep 2026 11:00:00 +0300</pubDate>
+      <description>«Совет директоров» Банка России 11 сентября 2026 года сохранил ключевую ставку на уровне 14% годовых. Это решение опубликовано после планового заседания.</description>
+    </item>
+    <item>
+      <title>Курс юаня вырос</title>
+      <link>https://www.rbc.ru/economics/11/09/2026/yuan</link>
+      <guid>rbc-yuan-2026-09-11</guid>
+      <pubDate>Fri, 11 Sep 2026 12:00:00 +0300</pubDate>
+      <description>Короткое описание.</description>
+      <content:encoded><![CDATA[<p>Курс китайской валюты вырос на 3% за неделю. Компании следят за расчетами в юанях.</p><script>secret()</script>]]></content:encoded>
+    </item>
+    <item>
+      <title>Коротко</title>
+      <link>https://www.rbc.ru/short/1</link>
+      <guid>rbc-short-1</guid>
+      <pubDate>Fri, 11 Sep 2026 13:00:00 +0300</pubDate>
+      <description></description>
+    </item>
+  </channel>
+</rss>

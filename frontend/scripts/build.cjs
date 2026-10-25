@@ -1,0 +1,12 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const {validateDataset} = require('../assets/model.js');
+const root = path.resolve(__dirname, '..');
+const data = validateDataset(JSON.parse(fs.readFileSync(path.join(root,'data/demo.json'), 'utf8')));
+const dist = path.join(root,'dist');
+fs.mkdirSync(path.join(dist,'data'), {recursive:true});
+fs.cpSync(path.join(root,'assets'), path.join(dist,'assets'), {recursive:true});
+fs.copyFileSync(path.join(root,'index.html'), path.join(dist,'index.html'));
+fs.writeFileSync(path.join(dist,'data/demo.json'), JSON.stringify(data,null,2));
+fs.writeFileSync(path.join(dist,'data/demo-data.js'), '/* Generated from data/demo.json; do not edit. */\nwindow.ALFA_DEMO = '+JSON.stringify(data).replace(/</g,'\\u003c')+';\n');
+console.log(`Built ${data.companies.length} companies and ${data.events.length} events into dist/`);

@@ -21,6 +21,9 @@ def test_health_and_e2e_trace(tmp_path) -> None:
     assert health.status_code == 200
     assert health.json()["status"] == "ok"
     assert health.json()["mock_llm"] is True
+    listed = client.get("/agent/clients")
+    assert listed.status_code == 200
+    assert "C_LOAN" in {item["client_id"] for item in listed.json()["clients"]}
 
     response = client.post(
         "/agent/insights",

@@ -185,6 +185,10 @@ class BankIndex:
         if not path.is_dir():
             return cls(fragments)
         for file in sorted(path.glob("*.txt")):
+            # Одноимённый .txt рядом с PDF — это расшифровка того же материала.
+            # Его подхватит обход PDF и присвоит doc_id из каталога.
+            if file.with_suffix(".pdf").is_file():
+                continue
             raw = file.read_text(encoding="utf-8").strip()
             if not raw:
                 continue

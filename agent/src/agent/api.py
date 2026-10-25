@@ -29,6 +29,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.runtime = runtime
 
+    @app.get("/agent/clients")
+    def list_clients(client_id: str | None = None, limit: int = 12) -> dict:
+        bounded = max(1, min(int(limit), 30))
+        records = _pick_clients(runtime.directory, client_id, bounded)
+        return {"clients": [_client_card(item) for item in records]}
+
     @app.get("/health")
     def health() -> dict:
         return {
@@ -78,6 +84,69 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         runtime.traces.save_feedback(body.insight_id, body.useful, body.comment)
 
     return app
+
+
+_PINNED_CLIENTS = (
+    "C_LOAN",
+    "C_DEPOSIT",
+    "C_IMPORT",
+    "C_DOMESTIC",
+    "C_SUPPLIER",
+    "C_GROUPMATE",
+    "C_SPARSE",
+    "U_9250",
+)
+
+
+def _pick_clients(directory, client_id: str | None, limit: int) -> list:
+    chosen = []
+    seen: set[str] = set()
+
+    def add(candidate: str | None) -> None:
+        if not candidate or candidate in seen:
+            return
+        record = directory.get(candidate)
+        if record is None:
+            return
+        seen.add(record.client_id)
+        chosen.append(record)
+
+    add(client_id)
+    for pinned in _PINNED_CLIENTS:
+        add(pinned)
+    if len(chosen) < limit and len(directory.clients) <= 40:
+        for record in directory.clients.values():
+            add(record.client_id)
+            if len(chosen) >= limit:
+                break
+    elif len(chosen) < limit:
+        ranked = sorted(directory.clients.values(), key=lambda item: item.revenue or 0, reverse=True)
+        for record in ranked:
+            add(record.client_id)
+            if len(chosen) >= limit:
+                break
+    return chosen[:limit]
+
+
+def _client_card(record) -> dict:
+    return {
+        "client_id": record.client_id,
+        "okved_name": record.okved_name,
+        "okved_code": record.okved_code,
+        "region": record.region,
+        "city": record.city,
+        "revenue": record.revenue,
+        "loan": record.loan,
+        "deposit": record.deposit,
+        "leasing": record.leasing,
+        "guarantee": record.guarantee,
+        "factoring": record.factoring,
+        "fts_flag": record.fts_flag,
+        "fts_country": record.fts_country,
+        "workers": record.workers_fns or record.workers_spark,
+        "client_type": record.client_type,
+        "group_id": record.group_id,
+    }
 
 
 def _check_role(role: str | None) -> None:

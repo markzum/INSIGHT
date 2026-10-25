@@ -164,7 +164,7 @@ class LLMClient:
         self.settings = settings
         self._transport = transport
         self._cache = ResponseCache(settings.cache_dir, settings.db_path)
-        self._http = httpx.Client(timeout=httpx.Timeout(60.0, connect=10.0))
+        self._http = httpx.Client(timeout=httpx.Timeout(180.0, connect=10.0))
         if settings.llm_api_key:
             logging.getLogger("agent").addFilter(_SecretFilter(settings.llm_api_key))
 

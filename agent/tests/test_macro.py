@@ -43,6 +43,7 @@ def test_sidecar_text_is_indexed(tmp_path) -> None:
     )
     index = BankIndex.load(tmp_path)
     assert index.unreadable == []
+    assert len(index.fragments) == 1
     found = index.macro("key_rate")
     assert found["found"] is True
     assert found["value_text"] in index.fragments[0].text
