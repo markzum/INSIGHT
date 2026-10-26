@@ -75,6 +75,12 @@ def company_from_client(client: dict) -> dict:
     add("AMOUNT_WORKERS_FNS_GRADATION", "Численность", client.get("workers"))
     add("FTS_COUNTRY_NAME", "Страны ВЭД", client.get("fts_country"))
     add("CL_TYPE", "Тип клиента", client.get("client_type"))
+    add("MARKET_POSITION", "Положение в отрасли", client.get("market_position"))
+    add("SAMPLE_SHARE", "Доля в выборке отрасли", client.get("sample_share"))
+    add("GROUP_ID", "Группа компаний", client.get("group_summary") or client.get("group_id"))
+    related = [str(item) for item in client.get("related_companies") or [] if item]
+    if related:
+        add("SYNTHETIC_F", "Компании через связанных физлиц", ", ".join(related))
     for field, label, raw in (
         ("CL_PRODUCT_LOA_MARK", "Кредитные продукты", client.get("loan")),
         ("CL_PRODUCT_DEP_MARK", "Депозиты", client.get("deposit")),
@@ -95,7 +101,7 @@ def company_from_client(client: dict) -> dict:
         "industry": client.get("okved_name") or "Отрасль не указана",
         "description": ", ".join(part for part in (client.get("okved_name"), client.get("region"), client.get("city")) if part),
         "features": features,
-        "missing_data": [] if features else ["В профиле нет заполненных признаков"],
+        "missing_data": _profile_gaps(client, features),
     }
 
 
@@ -114,7 +120,7 @@ def event_from_insight(insight: dict, company_id: str, role: str) -> dict:
                 "verification_status": "confirmed",
             }
         )
-    feature_refs = [item.get("csv_field") for item in insight.get("client_features_used") or [] if item.get("csv_field")]
+    feature_refs = [item.get("label") or item.get("csv_field") for item in insight.get("client_features_used") or [] if item.get("label") or item.get("csv_field")]
     bank_ids = [item["id"] for item in sources if item["type"] == "bank_analysis"]
     basis = {"fact_ids": [item["id"] for item in facts[:3]], "company_feature_refs": feature_refs[:4], "bank_source_ids": bank_ids}
     why = insight.get("why_it_matters") or []
@@ -134,7 +140,7 @@ def event_from_insight(insight: dict, company_id: str, role: str) -> dict:
         "category_label": TYPE_LABELS[kind],
         "date": when,
         "priority": impact,
-        "priority_reason": f"Влияние {impact}, приоритет {score:.3f}",
+        "priority_reason": f"Для роли {ROLE_LABELS.get(role, 'руководитель')}: влияние {impact}, приоритет {score:.3f}",
         "read_time": 3,
         "summary": summary,
         "impact_type": kind if kind in {"risk", "opportunity", "mixed"} else "mixed",
@@ -173,6 +179,7 @@ def event_from_insight(insight: dict, company_id: str, role: str) -> dict:
                 "reason": item.get("rationale") or "",
                 "check_before_action": insight.get("gaps") or ["Сверить формулировку с текстом источника"],
                 "related_risk_ids": [],
+                "product_hint": item.get("product_hint"),
                 "basis": basis,
             }
             for index, item in enumerate(insight.get("actions") or [])
@@ -188,6 +195,7 @@ def event_from_insight(insight: dict, company_id: str, role: str) -> dict:
             "conflicts": [],
         },
         "analysis_status": "partial" if insight.get("gaps") or not bank_summary else "ready",
+        "trace_id": insight.get("trace_id") or "",
     }
 
 
@@ -199,26 +207,40 @@ def _sources(insight: dict) -> list[dict]:
         if not source_id or source_id in seen:
             continue
         seen.add(source_id)
-        bank = item.get("kind") == "bank_analytics"
-        sources.append(_source(source_id, item.get("title") or source_id, item.get("published_at"), item.get("url"), bank, _text_for(insight, source_id)))
+        sources.append(
+            _source(
+                source_id,
+                item.get("title") or source_id,
+                item.get("published_at"),
+                item.get("url"),
+                str(item.get("kind") or "news"),
+                _text_for(insight, source_id),
+            )
+        )
     for fragment in insight.get("bank_view") or []:
         source_id = f"bank:{fragment.get('doc_id')}:{fragment.get('fragment_id')}"
         if source_id in seen:
             continue
         seen.add(source_id)
-        sources.append(_source(source_id, fragment.get("doc_title") or "Аналитика Альфа-Банка", None, None, True, fragment.get("text") or ""))
+        sources.append(_source(source_id, fragment.get("doc_title") or "Аналитика Альфа-Банка", None, None, "bank_analytics", fragment.get("text") or ""))
     return sources
 
 
-def _source(source_id: str, title: str, published: str | None, url: str | None, bank: bool, text: str) -> dict:
+def _source(source_id: str, title: str, published: str | None, url: str | None, kind: str, text: str) -> dict:
+    if kind == "bank_analytics":
+        source_type, publisher = "bank_analysis", "Альфа-Банк"
+    elif kind == "client_profile":
+        source_type, publisher = "client_profile", "Профиль клиента"
+    else:
+        source_type, publisher = "news", "Новостной источник"
     return {
         "id": source_id,
-        "type": "bank_analysis" if bank else "news",
+        "type": source_type,
         "is_demo": False,
         "title": title,
-        "publisher": "Альфа-Банк" if bank else "Новостной источник",
+        "publisher": publisher,
         "date": (published or "")[:10],
-        "url": url or ("https://alfabank.ru/" if bank else None),
+        "url": url or ("https://alfabank.ru/" if kind == "bank_analytics" else None),
         "text": text,
     }
 
@@ -241,11 +263,23 @@ def _impacts(insight: dict, key: str, basis: dict) -> list[dict]:
             "id": f"{key}-{index}",
             "text": item.get("text") or "",
             "condition": "Если сведения источников относятся к этой компании.",
+            "origin": item.get("origin") if item.get("origin") in {"ai", "bank"} else "ai",
             "basis": basis,
         }
         for index, item in enumerate(claims)
         if item.get("text")
     ]
+
+
+def _profile_gaps(client: dict, features: list[dict]) -> list[str]:
+    gaps = []
+    if not features:
+        gaps.append("В профиле нет заполненных признаков")
+    if client.get("sample_share"):
+        gaps.append("Доля посчитана внутри выборки клиентов банка с той же отраслью, а не по всему рынку.")
+    elif client.get("client_id"):
+        gaps.append("Положение в отрасли и доля не посчитаны: нет выручки или кода отрасли.")
+    return gaps
 
 
 def _flag(value: Any) -> bool | None:

@@ -20,6 +20,9 @@ ROLE_TREASURER = {
     "top_counterparties",
     "counterparty_concentration",
     "group",
+    "market_position",
+    "sample_share",
+    "related_via_persons",
     "commodity_exposure",
     "rko",
     "guarantee_product",
@@ -89,6 +92,85 @@ class Profile:
     def source_text(self, role: str | None = None) -> str:
         lines = [f"{item.label}: {item.value}" for item in self.for_role(role)]
         return "\n".join(lines)
+
+
+def _companies(count: int) -> str:
+    tail = count % 10
+    teens = count % 100
+    if tail == 1 and teens != 11:
+        word = "компания"
+    elif tail in {2, 3, 4} and teens not in {12, 13, 14}:
+        word = "компании"
+    else:
+        word = "компаний"
+    return f"{count} {word}"
+
+
+def _billions(value: float | None) -> str:
+    if value is None:
+        return "не указана"
+    return f"{value / 1_000_000_000:.1f} млрд руб."
+
+
+def _share_text(share: float | None) -> str:
+    if share is None:
+        return "не рассчитана"
+    return f"{share * 100:.1f}%"
+
+
+def position_texts(directory: ClientDirectory, record: ClientRecord) -> dict:
+    """Положение и доля считаются только по выручке клиентов в этой выборке."""
+    snap = directory.market_snapshot(record.client_id)
+    group = snap["group"]
+    if snap["rank"] is None:
+        market_value, market_active, market_code = "unknown", False, "unknown"
+    else:
+        market_value = (
+            f"{snap['rank']}-е место из {snap['peers']} в отрасли «{snap['sector_label']}» "
+            "по выручке внутри выборки клиентов банка"
+        )
+        market_active, market_code = True, f"{snap['rank']}/{snap['peers']}"
+    if snap["share"] is None:
+        share_value, share_active, share_code = "unknown", False, "unknown"
+    else:
+        share_value = (
+            f"{_share_text(snap['share'])} выручки выборки клиентов в отрасли «{snap['sector_label']}». "
+            "Это не доля всего рынка: объём рынка вне выборки не передан"
+        )
+        share_active, share_code = True, f"{snap['share']:.4f}"
+    if not group["id"]:
+        group_value, group_active, group_code = "unknown", False, "unknown"
+    else:
+        sectors = ", ".join(group["sectors"]) or "отрасли не определены"
+        group_share = ""
+        if group["sector_share"] is not None:
+            group_share = f"; доля группы в выборке отрасли клиента {_share_text(group['sector_share'])}"
+        group_value = (
+            f"{group['id']}: {_companies(group['members'])} в выборке, "
+            f"суммарная выручка {_billions(group['revenue'])}, отрасли: {sectors}{group_share}. "
+            "Доля группы тоже посчитана внутри выборки, не по всему рынку"
+        )
+        group_active, group_code = True, group["id"]
+    return {
+        "market_value": market_value,
+        "market_active": market_active,
+        "market_code": market_code,
+        "share_value": share_value,
+        "share_active": share_active,
+        "share_code": share_code,
+        "group_value": group_value,
+        "group_active": group_active,
+        "group_code": group_code,
+        "share": snap["share"],
+        "rank": snap["rank"],
+        "peers": snap["peers"],
+        "sector_label": snap["sector_label"],
+        "group_id": group["id"],
+        "group_members": group["members"],
+        "group_revenue": group["revenue"],
+        "group_sectors": group["sectors"],
+        "group_sector_share": group["sector_share"],
+    }
 
 
 def revenue_band(revenue: float | None) -> tuple[str, str, bool]:
@@ -240,19 +322,41 @@ def build_features(record: ClientRecord, directory: ClientDirectory, graph: Grap
             code=record.city.lower(),
         )
     )
+    position = position_texts(directory, record)
+    features.append(
+        Feature(
+            feature_id="market_position",
+            label="Положение в отрасли",
+            value=position["market_value"],
+            csv_field="REVENUE_COMPANY,MAINOKVED_CODE",
+            active=position["market_active"],
+            code=position["market_code"],
+        )
+    )
+    features.append(
+        Feature(
+            feature_id="sample_share",
+            label="Доля в выборке отрасли",
+            value=position["share_value"],
+            csv_field="REVENUE_COMPANY,MAINOKVED_CODE",
+            active=position["share_active"],
+            code=position["share_code"],
+        )
+    )
     features.append(
         Feature(
             feature_id="group",
             label="Группа компаний",
-            value=record.group_id or "unknown",
-            csv_field="GROUP_ID",
-            active=bool(record.group_id),
-            code=record.group_id,
+            value=position["group_value"],
+            csv_field="GROUP_ID,REVENUE_COMPANY",
+            active=position["group_active"],
+            code=position["group_code"],
         )
     )
 
     features.append(_counterparties_feature(graph))
     features.append(_concentration_feature(graph))
+    features.append(_person_links_feature(graph))
 
     features.append(
         Feature(
@@ -362,6 +466,32 @@ def _counterparties_feature(graph: GraphView) -> Feature:
         csv_field="BENEFICIARY,PAYER",
         active=bool(parts),
         code="present" if parts else "unknown",
+    )
+
+
+def _person_links_feature(graph: GraphView) -> Feature:
+    links = [item for item in graph.person_links if item.relation == "person"]
+    if not links:
+        return Feature(
+            feature_id="related_via_persons",
+            label="Компании через связанных физлиц",
+            value="unknown",
+            csv_field="SYNTHETIC_F,SYNTHETIC_U",
+            active=False,
+            code="unknown",
+        )
+    parts = []
+    for item in links[:5]:
+        sector = item.sector_label or "отрасль неизвестна"
+        region = item.region or "регион неизвестен"
+        parts.append(f"{item.counterparty_id} ({sector}, {region})")
+    return Feature(
+        feature_id="related_via_persons",
+        label="Компании через связанных физлиц",
+        value="; ".join(parts),
+        csv_field="SYNTHETIC_F,SYNTHETIC_U",
+        active=True,
+        code="present",
     )
 
 

@@ -125,7 +125,7 @@ class AgentRuntime:
         for cluster in self.news.clusters:
             if not cluster.in_period(period_from, period_to):
                 continue
-            pairs.append((score_relevance(profile, cluster, self.rules), cluster))
+            pairs.append((score_relevance(profile, cluster, self.rules, role or "ceo"), cluster))
         chosen = select_top([score for score, _cluster in pairs], limit, self.rules.min_relevance)
         by_cluster = {cluster.cluster_id: cluster for _score, cluster in pairs}
         score_by = {score.cluster_id: score for score, _cluster in pairs}
@@ -185,7 +185,7 @@ class AgentRuntime:
             if action == "ok":
                 break
             if action == "give_up_low_confidence" or iteration >= self.settings.max_iters:
-                draft = _give_up(draft, draft_context, issues + critic_issues)
+                draft = _give_up(draft, draft_context, issues + critic_issues, templates=self.settings.mock_llm)
                 drafts.append(draft)
                 break
             try:
@@ -199,13 +199,19 @@ class AgentRuntime:
                 draft = self._analyze(ctx, cluster, visible, fragments, draft_context, critique=issues + critic_issues)
                 drafts.append(draft)
             except (BudgetExceeded, httpx.HTTPError):
-                draft = _give_up(draft, draft_context, [{"code": "budget", "detail": "лимит шагов или токенов"}])
+                draft = _give_up(
+                    draft,
+                    draft_context,
+                    [{"code": "budget", "detail": "лимит шагов или токенов"}],
+                    templates=self.settings.mock_llm,
+                )
                 drafts.append(draft)
                 verifications.append({"iteration": iteration, "issues": [{"code": "budget", "detail": "лимит"}], "decision": "give_up_low_confidence"})
                 break
         _prepare_draft(draft, insight_id, trace_id, score.score)
         if schema_errors(draft, "insight.schema.json"):
-            draft = _give_up(grounded_draft(draft_context), draft_context, [{"code": "schema", "detail": "черновик не сошёлся со схемой"}])
+            base = grounded_draft(draft_context) if self.settings.mock_llm else draft
+            draft = _give_up(base, draft_context, [{"code": "schema", "detail": "черновик не сошёлся со схемой"}], templates=self.settings.mock_llm)
             _prepare_draft(draft, insight_id, trace_id, score.score)
             draft["generated_at"] = _now()
         self.traces.save_insight(draft)
@@ -293,7 +299,7 @@ class AgentRuntime:
             except (BudgetExceeded, httpx.HTTPError):
                 action = "give_up_low_confidence"
         if action != "ok":
-            answer = grounded_chat(context)
+            answer = grounded_chat(context) if self.settings.mock_llm else _keep_chat(answer, context)
             answer["confidence"] = "low"
             answer["gaps"] = list(answer.get("gaps") or []) + ["проверка не подтвердила ответ, уверенность снижена"]
             answer["trace_id"] = trace_id
@@ -453,7 +459,10 @@ class AgentRuntime:
         except (BudgetExceeded, httpx.HTTPError):
             parsed = None
         if not parsed:
-            parsed = grounded_draft(draft_context)
+            if self.settings.mock_llm:
+                parsed = grounded_draft(draft_context)
+            else:
+                parsed = _keep_model_text({}, draft_context)
             parsed["confidence"] = "low"
             parsed["gaps"] = list(parsed.get("gaps") or []) + ["модель не вернула валидный JSON"]
         parsed["client_id"] = ctx.session.client_id
@@ -514,8 +523,10 @@ class AgentRuntime:
         except (BudgetExceeded, httpx.HTTPError):
             parsed = None
         if not parsed:
-            parsed = grounded_chat(context)
+            parsed = grounded_chat(context) if self.settings.mock_llm else _keep_chat({}, context)
             parsed["confidence"] = "low"
+            if not self.settings.mock_llm:
+                parsed["gaps"] = list(parsed.get("gaps") or []) + ["модель не вернула валидный JSON"]
         parsed["insight_id"] = insight["insight_id"]
         parsed["question"] = question
         parsed["trace_id"] = ctx.session.trace_id
@@ -627,12 +638,202 @@ def _normalize_kinds(payload: dict[str, Any]) -> None:
         source["kind"] = _KIND_ALIASES.get(kind, kind)
 
 
-def _give_up(draft: dict[str, Any], context: dict[str, Any], issues: list[dict]) -> dict[str, Any]:
+def _text(value: Any) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _id_list(value: Any, fallback: list[str]) -> list[str]:
+    if isinstance(value, list):
+        ids = [str(item).strip() for item in value if str(item).strip()]
+        if ids:
+            return ids
+    return fallback
+
+
+def _keep_model_text(draft: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    """Оставляет формулировки модели и достраивает только обязательные поля схемы."""
+    draft = draft if isinstance(draft, dict) else {}
+    client_id = _text(draft.get("client_id")) or _text(context.get("client_id")) or "client"
+    cluster_id = _text(draft.get("cluster_id")) or _text(context.get("cluster_id")) or "cluster"
+    news_id = f"news:{cluster_id}"
+    profile_id = f"profile:{client_id}"
+    sources: list[dict[str, Any]] = []
+    for item in draft.get("sources") or context.get("sources") or []:
+        if not isinstance(item, dict) or not _text(item.get("source_id")):
+            continue
+        kind = _KIND_ALIASES.get(str(item.get("kind") or ""), str(item.get("kind") or ""))
+        if kind not in {"news", "bank_analytics", "client_profile"}:
+            continue
+        sources.append(
+            {
+                "source_id": _text(item.get("source_id")),
+                "kind": kind,
+                "title": _text(item.get("title")) or "Источник",
+                "url": item.get("url") if isinstance(item.get("url"), str) else None,
+                "published_at": item.get("published_at") if isinstance(item.get("published_at"), str) else None,
+            }
+        )
+    if not sources:
+        sources = [{"source_id": news_id, "kind": "news", "title": _text(context.get("title")) or "Новость", "url": None, "published_at": None}]
+
+    happened = draft.get("what_happened") if isinstance(draft.get("what_happened"), dict) else {}
+    facts = [
+        {"text": _text(item.get("text")), "source_ids": _id_list(item.get("source_ids"), [news_id]), "status": "confirmed"}
+        for item in happened.get("facts") or []
+        if isinstance(item, dict) and _text(item.get("text"))
+    ]
+    if not facts:
+        facts = [{"text": _text(context.get("summary")) or _text(context.get("title")) or "Событие из ленты", "source_ids": [news_id], "status": "confirmed"}]
+    assumptions = [
+        {"text": _text(item.get("text")), "source_ids": _id_list(item.get("source_ids"), [news_id]), "status": "unconfirmed"}
+        for item in happened.get("assumptions") or []
+        if isinstance(item, dict) and _text(item.get("text"))
+    ]
+    why_raw = draft.get("why_it_matters")
+    if isinstance(why_raw, str) and why_raw.strip():
+        why_raw = [{"text": why_raw.strip(), "client_features": ["sector"], "source_ids": [profile_id]}]
+    why = [
+        {
+            "text": _text(item.get("text")),
+            "client_features": [str(feature).strip() for feature in (item.get("client_features") or []) if str(feature).strip()] or ["sector"],
+            "source_ids": _id_list(item.get("source_ids"), [profile_id]),
+        }
+        for item in why_raw or []
+        if isinstance(item, dict) and _text(item.get("text"))
+    ]
+    if not why:
+        why = [{"text": "Модель не связала событие с профилем компании.", "client_features": ["sector"], "source_ids": [profile_id]}]
+
+    consequences = draft.get("consequences") if isinstance(draft.get("consequences"), dict) else {}
+
+    def claims(items: Any) -> list[dict[str, Any]]:
+        return [
+            {
+                "text": _text(item.get("text")),
+                "source_ids": _id_list(item.get("source_ids"), [news_id]),
+                "origin": item.get("origin") if item.get("origin") in {"ai", "bank"} else "ai",
+            }
+            for item in items or []
+            if isinstance(item, dict) and _text(item.get("text"))
+        ]
+
+    actions = [
+        {
+            "text": _text(item.get("text")),
+            "rationale": _text(item.get("rationale")) or "формулировка модели",
+            "origin": item.get("origin") if item.get("origin") in {"ai", "bank"} else "ai",
+            "product_hint": item.get("product_hint") if isinstance(item.get("product_hint"), str) and item.get("product_hint").strip() else None,
+        }
+        for item in draft.get("actions") or []
+        if isinstance(item, dict) and _text(item.get("text"))
+    ]
+    if not actions:
+        actions = [{"text": "Модель не предложила действие.", "rationale": "в ответе модели не было шага", "origin": "ai", "product_hint": None}]
+    bank = [
+        {
+            "text": _text(item.get("text")),
+            "doc_id": _text(item.get("doc_id")) or "bank",
+            "doc_title": _text(item.get("doc_title")) or "Документ банка",
+            "fragment_id": _text(item.get("fragment_id")),
+        }
+        for item in draft.get("bank_view") or []
+        if isinstance(item, dict) and _text(item.get("text")) and _text(item.get("fragment_id"))
+    ]
+    features = [
+        {
+            "feature_id": _text(item.get("feature_id")),
+            "label": _text(item.get("label")) or _text(item.get("feature_id")),
+            "value": "" if item.get("value") is None else str(item.get("value")),
+            "csv_field": _text(item.get("csv_field")) or "SYNTHETIC_U",
+        }
+        for item in draft.get("client_features_used") or []
+        if isinstance(item, dict) and _text(item.get("feature_id"))
+    ]
+    score = draft.get("priority_score")
+    if not isinstance(score, (int, float)) or isinstance(score, bool) or not 0 <= float(score) <= 1:
+        score = 0.0
+    return {
+        "insight_id": _text(draft.get("insight_id")) or "pending",
+        "client_id": client_id,
+        "cluster_id": cluster_id,
+        "generated_at": _now(),
+        "headline": _text(draft.get("headline")) or _text(context.get("title")) or "Событие",
+        "type": draft.get("type") if draft.get("type") in {"risk", "opportunity", "mixed", "neutral"} else "neutral",
+        "urgency": draft.get("urgency") if draft.get("urgency") in _LEVELS else "low",
+        "impact": draft.get("impact") if draft.get("impact") in _LEVELS else "low",
+        "confidence": "low",
+        "priority_score": float(score),
+        "what_happened": {"facts": facts, "assumptions": assumptions},
+        "why_it_matters": why,
+        "consequences": {
+            "risks": claims(consequences.get("risks")),
+            "opportunities": claims(consequences.get("opportunities")),
+            "factors_to_watch": [str(item).strip() for item in (consequences.get("factors_to_watch") or []) if str(item).strip()],
+        },
+        "actions": actions,
+        "bank_view": bank,
+        "sources": sources,
+        "client_features_used": features,
+        "trace_id": _text(draft.get("trace_id")) or _text(context.get("trace_id")) or "pending",
+        "gaps": [str(item) for item in (draft.get("gaps") or []) if str(item).strip()],
+    }
+
+
+def _keep_chat(parsed: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    parsed = parsed if isinstance(parsed, dict) else {}
+    sources = []
+    for item in parsed.get("sources") or context.get("sources") or []:
+        if isinstance(item, dict) and _text(item.get("source_id")):
+            kind = _KIND_ALIASES.get(str(item.get("kind") or ""), str(item.get("kind") or "news"))
+            if kind not in {"news", "bank_analytics", "client_profile"}:
+                kind = "news"
+            sources.append(
+                {
+                    "source_id": _text(item.get("source_id")),
+                    "kind": kind,
+                    "title": _text(item.get("title")) or "Источник",
+                    "url": item.get("url") if isinstance(item.get("url"), str) else None,
+                    "published_at": item.get("published_at") if isinstance(item.get("published_at"), str) else None,
+                }
+            )
+    if not sources:
+        sources = [{"source_id": "news:cluster", "kind": "news", "title": "Новость", "url": None, "published_at": None}]
+    fallback_id = [sources[0]["source_id"]]
+    answer = [
+        {
+            "text": _text(item.get("text")),
+            "origin": item.get("origin") if item.get("origin") in {"ai", "bank"} else "ai",
+            "source_ids": _id_list(item.get("source_ids"), fallback_id),
+        }
+        for item in parsed.get("answer") or []
+        if isinstance(item, dict) and _text(item.get("text"))
+    ]
+    if not answer:
+        answer = [{"text": "Модель не ответила на вопрос.", "origin": "ai", "source_ids": fallback_id}]
+    return {
+        "insight_id": _text(parsed.get("insight_id")) or _text(context.get("insight_id")) or "pending",
+        "question": _text(parsed.get("question")) or _text(context.get("question")) or "вопрос",
+        "answer": answer,
+        "sources": sources,
+        "confidence": "low",
+        "trace_id": _text(parsed.get("trace_id")) or _text(context.get("trace_id")) or "pending",
+        "gaps": [str(item) for item in (parsed.get("gaps") or []) if str(item).strip()],
+    }
+
+
+def _give_up(draft: dict[str, Any], context: dict[str, Any], issues: list[dict], templates: bool = False) -> dict[str, Any]:
     if schema_errors(draft, "insight.schema.json"):
-        draft = grounded_draft(context)
+        draft = grounded_draft(context) if templates else _keep_model_text(draft, context)
     draft["confidence"] = "low"
     gaps = list(draft.get("gaps") or [])
-    note = "Данных не хватило для уверенного вывода: " + "; ".join(item.get("detail") or item.get("code", "") for item in issues[:3])
+    bits = []
+    for item in issues[:3]:
+        detail = str(item.get("detail") or item.get("code") or "")
+        if item.get("code") == "schema" or "required property" in detail or "is not of type" in detail:
+            detail = "часть ответа модели не совпала со схемой, формулировки модели сохранены"
+        if detail and detail not in bits:
+            bits.append(detail)
+    note = "Данных не хватило для уверенного вывода: " + "; ".join(bits)
     if note not in gaps:
         gaps.append(note)
     draft["gaps"] = gaps

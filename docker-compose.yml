@@ -20,8 +20,17 @@ services:
       context: ./agent
     ports:
       - "8010:8000"
+    env_file:
+      - path: ./agent/.env
+        required: false
     environment:
-      MOCK_LLM: "1"
+      MOCK_LLM: "0"
+      AGENT_MAX_SECONDS: "300"
+      AGENT_MAX_TOKENS: "80000"
+      LLM_BASE_URL: https://changellenge.up.railway.app/v1
+      LLM_MODEL_LIGHT: google/gemma-4-26b-a4b-it
+      LLM_MODEL_REASONING: z-ai/glm-5.3-flash
+      LLM_MODEL_DEFAULT: qwen/qwen3.6-35b-a3b
       AGENT_HOME: /app
       AGENT_SCHEMA_DIR: /app/schemas
       AGENT_CLIENTS_CSV: /data/df_Uid_data_hack.csv

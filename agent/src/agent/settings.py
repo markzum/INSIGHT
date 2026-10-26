@@ -1,4 +1,4 @@
-"""Настройки запуска. Секреты и имена моделей только из окружения."""
+"""Настройки запуска. Секрет читается из окружения или agent/.env и в код не записывается."""
 
 from __future__ import annotations
 
@@ -7,6 +7,26 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from agent.paths import PACKAGE_ROOT, SYNTHETIC_DIR
+
+
+_MODEL_LIGHT = "google/gemma-4-26b-a4b-it"
+_MODEL_REASONING = "z-ai/glm-5.3-flash"
+_MODEL_DEFAULT = "qwen/qwen3.6-35b-a3b"
+_BASE_URL = "https://changellenge.up.railway.app/v1"
+
+
+def _load_dotenv() -> None:
+    path = PACKAGE_ROOT / ".env"
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        raw = line.strip()
+        if not raw or raw.startswith("#") or "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        key = key.strip()
+        if key and key not in os.environ:
+            os.environ[key] = value.strip().strip('"').strip("'")
 
 
 def _flag(name: str, default: bool = False) -> bool:
@@ -23,12 +43,12 @@ def _path(name: str, default: Path) -> Path:
 
 @dataclass
 class Settings:
-    llm_base_url: str = ""
+    llm_base_url: str = _BASE_URL
     llm_api_key: str = ""
-    llm_model_light: str = "light"
-    llm_model_reasoning: str = "reasoning"
-    llm_model_default: str = "default"
-    mock_llm: bool = True
+    llm_model_light: str = _MODEL_LIGHT
+    llm_model_reasoning: str = _MODEL_REASONING
+    llm_model_default: str = _MODEL_DEFAULT
+    mock_llm: bool = False
     top_n: int = 10
     max_iters: int = 2
     max_steps: int = 12
@@ -49,13 +69,14 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
+        _load_dotenv()
         return cls(
-            llm_base_url=os.environ.get("LLM_BASE_URL", "").rstrip("/"),
+            llm_base_url=os.environ.get("LLM_BASE_URL", _BASE_URL).rstrip("/"),
             llm_api_key=os.environ.get("LLM_API_KEY", ""),
-            llm_model_light=os.environ.get("LLM_MODEL_LIGHT", "light"),
-            llm_model_reasoning=os.environ.get("LLM_MODEL_REASONING", "reasoning"),
-            llm_model_default=os.environ.get("LLM_MODEL_DEFAULT", "default"),
-            mock_llm=_flag("MOCK_LLM", default=True),
+            llm_model_light=os.environ.get("LLM_MODEL_LIGHT", _MODEL_LIGHT),
+            llm_model_reasoning=os.environ.get("LLM_MODEL_REASONING", _MODEL_REASONING),
+            llm_model_default=os.environ.get("LLM_MODEL_DEFAULT", _MODEL_DEFAULT),
+            mock_llm=_flag("MOCK_LLM", default=False),
             top_n=int(os.environ.get("AGENT_TOP_N", "10")),
             max_iters=int(os.environ.get("AGENT_MAX_ITERS", "2")),
             max_steps=int(os.environ.get("AGENT_MAX_STEPS", "12")),

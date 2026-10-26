@@ -6,6 +6,8 @@ weights:
   sector_client: 0.35
   sector_counterparty: 0.15
   region: 0.15
+  group_sector: 0.10
+  person_sector: 0.08
 
 sensitivity_cap: 0.35
 min_relevance: 0.05

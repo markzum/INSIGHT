@@ -37,6 +37,10 @@ def test_loan_profile_features(directory: ClientDirectory) -> None:
     assert features["demand_sensitivity"].active is True
     assert "C_SUPPLIER" in features["top_counterparties"].value
     assert features["counterparty_concentration"].value.startswith("доля крупнейшего контрагента 100%")
+    assert features["market_position"].code == "4/4"
+    assert "не доля всего рынка" in features["sample_share"].value
+    assert features["group"].code == "group_loan"
+    assert "C_GROUPMATE" in features["related_via_persons"].value
     assert profile.graph.group_members[0].counterparty_id == "C_GROUPMATE"
     assert profile.graph.person_links[0].counterparty_id == "C_GROUPMATE"
 
@@ -49,6 +53,8 @@ def test_sparse_profile_does_not_fail(directory: ClientDirectory) -> None:
     assert features["scale_revenue"].code == "unknown"
     assert features["top_counterparties"].value == "unknown"
     assert features["fx_sensitivity"].code == "no"
+    assert features["market_position"].active is False
+    assert features["sample_share"].value == "unknown"
 
 
 def test_unknown_client(directory: ClientDirectory) -> None:
@@ -109,6 +115,21 @@ def test_counterparty_sector_and_region(directory: ClientDirectory, rules: Sensi
     local_score = score_relevance(build_profile(directory, "C_LOAN"), local, rules)
     assert any(reason.code == "sector_client" for reason in local_score.reasons)
     assert any(reason.code == "region" for reason in local_score.reasons)
+
+
+def test_group_sector_and_role_shift(directory: ClientDirectory, rules: SensitivityRules) -> None:
+    profile = build_profile(directory, "C_LOAN")
+    construction = cluster("clu_build", "Строительство жилья замедлилось", "Девелоперы сокращают запуски.")
+    score = score_relevance(profile, construction, rules)
+    assert any(reason.code == "group_sector" and reason.feature_id == "group" for reason in score.reasons)
+    rate = cluster("clu_rate", "ЦБ сохранил ключевую ставку", "Банк России сохранил ключевую ставку на уровне 14%.")
+    base = score_relevance(profile, rate, rules)
+    treasurer = score_relevance(profile, rate, rules, role="treasurer")
+    assert treasurer.score > base.score
+    labor = cluster("clu_labor", "Рынок труда остаётся напряжённым", "Зарплаты и спрос на персонал растут.")
+    labor_base = score_relevance(profile, labor, rules)
+    labor_treasury = score_relevance(profile, labor, rules, role="treasurer")
+    assert labor_treasury.score < labor_base.score
 
 
 def test_select_top_drops_noise(directory: ClientDirectory, rules: SensitivityRules) -> None:

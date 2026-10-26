@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from agent import __version__
 from agent.errors import ClientNotFound, InsightNotFound
 from agent.loop import AgentRuntime
+from agent.profile_features import position_texts
 from agent.schemas.models import ChatAnswer, ChatRequest, Insight, InsightsRequest
 from agent.settings import Settings
 
@@ -33,7 +34,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def list_clients(client_id: str | None = None, limit: int = 12) -> dict:
         bounded = max(1, min(int(limit), 30))
         records = _pick_clients(runtime.directory, client_id, bounded)
-        return {"clients": [_client_card(item) for item in records]}
+        return {"clients": [_client_card(item, runtime.directory) for item in records]}
 
     @app.get("/health")
     def health() -> dict:
@@ -120,15 +121,30 @@ def _pick_clients(directory, client_id: str | None, limit: int) -> list:
             if len(chosen) >= limit:
                 break
     elif len(chosen) < limit:
-        ranked = sorted(directory.clients.values(), key=lambda item: item.revenue or 0, reverse=True)
-        for record in ranked:
+        # По одной крупной компании на отрасль, чтобы переключатель показывал разный контекст,
+        # а не двенадцать похожих лидеров по выручке.
+        by_sector: dict[str, object] = {}
+        for record in directory.clients.values():
+            sector_id, _label = directory.okved.resolve(record.okved_code)
+            current = by_sector.get(sector_id)
+            if current is None or (record.revenue or 0) > (current.revenue or 0):
+                by_sector[sector_id] = record
+        for record in sorted(by_sector.values(), key=lambda item: item.revenue or 0, reverse=True):
             add(record.client_id)
             if len(chosen) >= limit:
                 break
+        if len(chosen) < limit:
+            ranked = sorted(directory.clients.values(), key=lambda item: item.revenue or 0, reverse=True)
+            for record in ranked:
+                add(record.client_id)
+                if len(chosen) >= limit:
+                    break
     return chosen[:limit]
 
 
-def _client_card(record) -> dict:
+def _client_card(record, directory) -> dict:
+    position = position_texts(directory, record)
+    links = [item.counterparty_id for item in directory.graph(record.client_id).person_links[:3]]
     return {
         "client_id": record.client_id,
         "okved_name": record.okved_name,
@@ -146,6 +162,10 @@ def _client_card(record) -> dict:
         "workers": record.workers_fns or record.workers_spark,
         "client_type": record.client_type,
         "group_id": record.group_id,
+        "market_position": position["market_value"] if position["market_active"] else "",
+        "sample_share": position["share_value"] if position["share_active"] else "",
+        "group_summary": position["group_value"] if position["group_active"] else "",
+        "related_companies": links,
     }
 
 

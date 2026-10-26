@@ -7,7 +7,7 @@ const server = http.createServer((req,res) => {
   try {
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     if (pathname === '/assets/config.js' && process.env.ALFA_API_BASE) {
-      const payload = { apiBaseUrl: process.env.ALFA_API_BASE, requestTimeoutMs: Number(process.env.ALFA_TIMEOUT_MS || 180000) };
+      const payload = { apiBaseUrl: process.env.ALFA_API_BASE, requestTimeoutMs: Number(process.env.ALFA_TIMEOUT_MS || 360000) };
       res.writeHead(200, {'Content-Type': mime['.js'], 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'});
       res.end('window.ALFA_CONFIG = ' + JSON.stringify(payload) + ';'); return;
     }

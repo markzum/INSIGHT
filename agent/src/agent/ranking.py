@@ -14,6 +14,35 @@ _TOKEN = re.compile(r"[a-zа-яё0-9]+", re.IGNORECASE)
 _REGION_NOISE = ("область", "край", "республика", "округ", "автономный", "город", "г")
 
 LEVEL_WEIGHT = {"high": 1.0, "medium": 0.6, "low": 0.3}
+# Множители роли меняют вес уже найденных причин. Генеральный директор сильнее
+# смотрит на отрасль и группу, казначей — на ставку, валюту и контрагентов.
+ROLE_FACTORS = {
+    "ceo": {
+        "sector_client": 1.15,
+        "group": 1.25,
+        "market_position": 1.2,
+        "demand_sensitivity": 1.15,
+        "related_via_persons": 1.15,
+    },
+    "cfo": {
+        "rate_sensitivity": 1.25,
+        "labor_sensitivity": 1.2,
+        "scale_revenue": 1.15,
+        "sample_share": 1.1,
+    },
+    "treasurer": {
+        "rate_sensitivity": 1.45,
+        "fx_sensitivity": 1.45,
+        "deposit_benefit": 1.35,
+        "factoring_sensitivity": 1.35,
+        "top_counterparties": 1.2,
+        "counterparty_concentration": 1.2,
+        "labor_sensitivity": 0.35,
+        "demand_sensitivity": 0.45,
+        "commodity_exposure": 0.55,
+        "sector_client": 0.75,
+    },
+}
 
 
 def _norm(text: str) -> str:
@@ -46,6 +75,8 @@ class SensitivityRules:
     sector_client: float
     sector_counterparty: float
     region: float
+    group_sector: float
+    person_sector: float
     sensitivity_cap: float
     min_relevance: float
     counterparty_limit: int
@@ -60,6 +91,8 @@ class SensitivityRules:
             sector_client=float(weights.get("sector_client", 0.35)),
             sector_counterparty=float(weights.get("sector_counterparty", 0.15)),
             region=float(weights.get("region", 0.15)),
+            group_sector=float(weights.get("group_sector", 0.10)),
+            person_sector=float(weights.get("person_sector", 0.08)),
             sensitivity_cap=float(data.get("sensitivity_cap", 0.35)),
             min_relevance=float(data.get("min_relevance", 0.05)),
             counterparty_limit=int(data.get("counterparty_limit", 5)),
@@ -116,7 +149,56 @@ def _region_match(profile: Profile, text: str, token_set: set[str]) -> bool:
     return any(probe and (probe in token_set or any(token.startswith(probe) for token in token_set)) for probe in probes)
 
 
-def score_relevance(profile: Profile, cluster: NewsCluster, rules: SensitivityRules) -> RelevanceScore:
+def _reweight(reasons: list[Reason], role: str | None) -> list[Reason]:
+    factors = ROLE_FACTORS.get((role or "").lower(), {})
+    if not factors:
+        return reasons
+    adjusted: list[Reason] = []
+    for reason in reasons:
+        if reason.code == "sensitivity_cap":
+            adjusted.append(reason)
+            continue
+        factor = factors.get(reason.feature_id or "", factors.get(reason.code, 1.0))
+        if factor == 1.0:
+            adjusted.append(reason)
+            continue
+        adjusted.append(Reason(reason.code, reason.feature_id, round(reason.weight * factor, 4), reason.detail))
+    return adjusted
+
+
+def _linked_sector(
+    items: list,
+    seen: set[str],
+    rules: SensitivityRules,
+    text: str,
+    token_set: set[str],
+    tags: set[str],
+    code: str,
+    feature_id: str,
+    weight: float,
+    label: str,
+) -> Reason | None:
+    for item in items:
+        if not item.sector_id or item.counterparty_id in seen:
+            continue
+        if not _sector_match(item.sector_id, rules, text, token_set, tags):
+            continue
+        seen.add(item.counterparty_id)
+        return Reason(
+            code,
+            feature_id,
+            weight,
+            f"событие близко к {label} {item.counterparty_id} ({item.sector_label})",
+        )
+    return None
+
+
+def score_relevance(
+    profile: Profile,
+    cluster: NewsCluster,
+    rules: SensitivityRules,
+    role: str | None = None,
+) -> RelevanceScore:
     text = cluster.searchable_text()
     token_set = tokens(text)
     tags = {_norm(tag) for tag in cluster.tags}
@@ -136,7 +218,9 @@ def score_relevance(profile: Profile, cluster: NewsCluster, rules: SensitivityRu
         if _sector_match(item.sector_id, rules, text, token_set, tags):
             matched_counterparty = item
             break
+    seen_parties: set[str] = set()
     if matched_counterparty is not None:
+        seen_parties.add(matched_counterparty.counterparty_id)
         reasons.append(
             Reason(
                 "sector_counterparty",
@@ -145,6 +229,34 @@ def score_relevance(profile: Profile, cluster: NewsCluster, rules: SensitivityRu
                 f"событие близко к контрагенту {matched_counterparty.counterparty_id} ({matched_counterparty.sector_label})",
             )
         )
+    group_reason = _linked_sector(
+        profile.graph.group_members,
+        seen_parties,
+        rules,
+        text,
+        token_set,
+        tags,
+        "group_sector",
+        "group",
+        rules.group_sector,
+        "компании группы",
+    )
+    if group_reason is not None:
+        reasons.append(group_reason)
+    person_reason = _linked_sector(
+        profile.graph.person_links,
+        seen_parties,
+        rules,
+        text,
+        token_set,
+        tags,
+        "person_sector",
+        "related_via_persons",
+        rules.person_sector,
+        "компании, связанной через физлицо",
+    )
+    if person_reason is not None:
+        reasons.append(person_reason)
 
     if profile.active("region") and _region_match(profile, text, token_set):
         reasons.append(Reason("region", "region", rules.region, f"в тексте есть регион или город клиента ({profile.record.region})"))
@@ -172,6 +284,7 @@ def score_relevance(profile: Profile, cluster: NewsCluster, rules: SensitivityRu
         sensitivity = rules.sensitivity_cap
         reasons.append(Reason("sensitivity_cap", None, -overflow, "вклад чувствительности ограничен потолком"))
 
+    reasons = _reweight(reasons, role)
     raw = sum(reason.weight for reason in reasons)
     score = max(0.0, min(1.0, raw))
     return RelevanceScore(profile.client_id, cluster.cluster_id, round(score, 4), reasons)

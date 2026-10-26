@@ -29,6 +29,11 @@ class QuestionRequest(BaseModel):
     question: str = Field(min_length=1)
 
 
+class FeedbackBody(BaseModel):
+    useful: bool
+    comment: str = ""
+
+
 def _agent() -> str:
     return os.environ.get("AGENT_URL", "http://127.0.0.1:8000").rstrip("/")
 
@@ -38,7 +43,7 @@ def _period() -> tuple[str, str]:
 
 
 def _client() -> httpx.Client:
-    return httpx.Client(timeout=httpx.Timeout(180.0, connect=5.0))
+    return httpx.Client(timeout=httpx.Timeout(360.0, connect=5.0))
 
 
 @app.get("/health")
@@ -87,6 +92,23 @@ def ask(insight_id: str, body: QuestionRequest) -> dict:
     if response.status_code >= 400:
         raise HTTPException(status_code=502, detail="агент не ответил")
     return question_answer(response.json())
+
+
+@app.post("/insights/{insight_id}/feedback")
+def send_feedback(insight_id: str, body: FeedbackBody) -> dict:
+    try:
+        with _client() as client:
+            response = client.post(
+                f"{_agent()}/agent/feedback",
+                json={"insight_id": insight_id, "useful": body.useful, "comment": body.comment or None},
+            )
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="агент не принял отзыв") from exc
+    if response.status_code == 404:
+        raise HTTPException(status_code=404, detail="событие не найдено")
+    if response.status_code >= 400:
+        raise HTTPException(status_code=502, detail="агент не принял отзыв")
+    return {"status": "saved"}
 
 
 def _insights(client: httpx.Client, client_id: str, role: str, period_from: str, period_to: str) -> list[dict[str, Any]]:

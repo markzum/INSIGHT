@@ -31,6 +31,10 @@ _WHY = {
     "region": "Компания привязана к своему региону, поэтому местный эффект события для неё важнее общей сводки.",
     "counterparty_concentration": "Платежи сосредоточены на небольшом круге контрагентов, поэтому сбой у них быстро доходит до клиента.",
     "scale_revenue": "Масштаб выручки делает даже умеренное движение рынка заметным в денежном выражении.",
+    "market_position": "Место компании среди клиентов банка в той же отрасли меняет масштаб последствия: лидер выборки и компания с меньшим местом читают одно событие по-разному.",
+    "sample_share": "Доля выручки внутри выборки клиентов отрасли показывает вес компании среди известных клиентов банка. Это не доля всего рынка: его объём в данных не передан.",
+    "group": "Событие стоит читать через группу компаний, а не только через одно юридическое лицо: у связанных компаний другие отрасли и своя выручка.",
+    "related_via_persons": "Общее физлицо связывает компанию с другой организацией, поэтому событие в отрасли связанной компании может дойти до клиента по контуру управления.",
 }
 
 _ACTIONS = {
@@ -54,6 +58,21 @@ _ACTIONS = {
         "Новость о рынке труда полезна только вместе с внутренним планом найма.",
         "payroll",
     ),
+    "market_position": (
+        "Сверить, держится ли место компании в отрасли на собственных продажах или на компаниях группы.",
+        "Без этой сверки новость об отрасли не показывает, кого она задевает сильнее.",
+        None,
+    ),
+    "group": (
+        "Проверить, у какой компании группы событие меняет выручку, закупки или долг, и не переносить вывод автоматически на всю группу.",
+        "У компаний одной группы разные отрасли и продукты, поэтому эффект не общий.",
+        None,
+    ),
+    "related_via_persons": (
+        "Уточнить, какая связь через физлицо реально влияет на договоры и платежи, а какая только числится в профиле.",
+        "Идентификатор физлица сам по себе не доказывает операционную зависимость.",
+        None,
+    ),
     "default": (
         "Уточнить у профильной функции, какой показатель компании это событие двигает в ближайшем квартале.",
         "Без внутреннего показателя вывод останется общим.",
@@ -70,8 +89,24 @@ _FEATURE_ORDER = [
     "demand_sensitivity",
     "counterparty_concentration",
     "sector",
+    "group",
+    "related_via_persons",
+    "market_position",
+    "sample_share",
     "region",
     "scale_revenue",
+]
+# Добор, если у события меньше двух совпавших признаков. Сюда не входят
+# кредиты и валюта: иначе новость про курс получает вывод про ставку.
+_PAD_ORDER = [
+    "market_position",
+    "sample_share",
+    "scale_revenue",
+    "group",
+    "related_via_persons",
+    "sector",
+    "region",
+    "counterparty_concentration",
 ]
 
 
@@ -164,7 +199,7 @@ class LLMClient:
         self.settings = settings
         self._transport = transport
         self._cache = ResponseCache(settings.cache_dir, settings.db_path)
-        self._http = httpx.Client(timeout=httpx.Timeout(180.0, connect=10.0))
+        self._http = httpx.Client(timeout=httpx.Timeout(150.0, connect=10.0))
         if settings.llm_api_key:
             logging.getLogger("agent").addFilter(_SecretFilter(settings.llm_api_key))
 
@@ -254,12 +289,33 @@ class LLMClient:
         if self._transport is not None:
             return self._transport(payload, headers)
         url = f"{self.settings.llm_base_url}/chat/completions"
-        response = self._http.post(url, headers=headers, json=payload)
+        response = self._request(url, headers, payload)
         if response.status_code == 400 and "response_format" in payload:
             reduced = {key: value for key, value in payload.items() if key != "response_format"}
-            response = self._http.post(url, headers=headers, json=reduced)
+            response = self._request(url, headers, reduced)
         response.raise_for_status()
         return response.json()
+
+    def _request(self, url: str, headers: dict[str, str], payload: dict[str, Any]) -> httpx.Response:
+        """Жёсткий предел: зависший сокет прокси не должен держать запрос дольше лимита."""
+        box: dict[str, Any] = {}
+
+        def run() -> None:
+            try:
+                box["response"] = self._http.post(url, headers=headers, json=payload)
+            except Exception as exc:  # noqa: BLE001 - ошибка уходит вызывающему коду
+                box["error"] = exc
+
+        thread = threading.Thread(target=run, daemon=True)
+        thread.start()
+        thread.join(150)
+        if thread.is_alive():
+            self._http.close()
+            self._http = httpx.Client(timeout=httpx.Timeout(150.0, connect=10.0))
+            raise httpx.TimeoutException("модель не ответила за 150 секунд")
+        if "error" in box:
+            raise box["error"]
+        return box["response"]
 
     def _mock(self, kind: str, context: dict[str, Any]) -> str:
         if kind == "plan":
@@ -356,18 +412,31 @@ def _pick_features(context: dict[str, Any]) -> list[dict[str, Any]]:
     features = list(context.get("features") or [])
     by_id = {item["feature_id"]: item for item in features}
     ordered: list[str] = []
-    for feature_id in list(context.get("matched_feature_ids") or []) + _FEATURE_ORDER:
+
+    def take(feature_id: str) -> None:
         feature = by_id.get(feature_id)
         if feature and feature.get("active") and feature_id not in ordered:
             ordered.append(feature_id)
-    chosen = [by_id[feature_id] for feature_id in ordered]
-    if len(chosen) < 2:
-        for feature in features:
-            if feature not in chosen:
-                chosen.append(feature)
-            if len(chosen) >= 2:
+
+    matched = list(context.get("matched_feature_ids") or [])
+    for feature_id in matched:
+        take(feature_id)
+    if not matched:
+        for feature_id in _FEATURE_ORDER:
+            take(feature_id)
+            if len(ordered) >= 2:
                 break
-    return chosen[:3]
+    elif len(ordered) < 2:
+        for feature_id in _PAD_ORDER:
+            take(feature_id)
+            if len(ordered) >= 2:
+                break
+    if len(ordered) < 2:
+        for feature in features:
+            take(feature["feature_id"])
+            if len(ordered) >= 2:
+                break
+    return [by_id[feature_id] for feature_id in ordered[:3]]
 
 
 def _mock_analyze(context: dict[str, Any]) -> dict[str, Any]:

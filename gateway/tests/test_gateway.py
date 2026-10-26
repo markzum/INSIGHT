@@ -21,6 +21,10 @@ def test_role_and_workspace_shape() -> None:
     assert event["bank_view"]["status"] == "available"
     assert any(item["type"] == "bank_analysis" and item["url"].startswith("https://") for item in event["sources"])
     assert "REVENUE_COMPANY" in {item["field"] for item in dataset["companies"][0]["features"]}
+    assert any(item["field"] == "SAMPLE_SHARE" for item in dataset["companies"][0]["features"])
+    assert event["trace_id"] == "tr-1"
+    assert event["ai_interpretation"]["risks"][0]["origin"] == "ai"
+    assert any("выборки" in item for item in dataset["companies"][0]["missing_data"])
     answer = question_answer({"answer": [{"text": "Ставка сохранена.", "source_ids": ["news:clu_rate:0"], "origin": "ai"}]})
     assert answer["is_demo"] is False
     assert answer["source_ids"] == ["news:clu_rate:0"]
@@ -44,6 +48,22 @@ def test_workspace_route_uses_agent(monkeypatch: pytest.MonkeyPatch) -> None:
     body = response.json()
     assert body["companies"][0]["id"] == "C_LOAN"
     assert body["events"][0]["company_ids"] == ["C_LOAN"]
+
+
+def test_feedback_is_forwarded(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/agent/feedback":
+            seen["body"] = request.read().decode()
+            return httpx.Response(204)
+        return httpx.Response(404)
+
+    monkeypatch.setattr("gateway.api._client", lambda: httpx.Client(transport=httpx.MockTransport(handler)))
+    response = TestClient(app).post("/insights/ins-1/feedback", json={"useful": True, "comment": ""})
+    assert response.status_code == 200
+    assert response.json()["status"] == "saved"
+    assert "ins-1" in seen["body"]
 
 
 def test_refresh_stores_clusters_and_falls_back(tmp_path: Path) -> None:
@@ -92,7 +112,11 @@ def _client() -> dict:
         "fts_country": "",
         "workers": "101-250",
         "client_type": "CLIENT",
-        "group_id": "",
+        "group_id": "group_loan",
+        "market_position": "4-е место из 4 в отрасли «Оптовая торговля» по выручке внутри выборки клиентов банка",
+        "sample_share": "20.6% выручки выборки клиентов в отрасли «Оптовая торговля». Это не доля всего рынка: объём рынка вне выборки не передан",
+        "group_summary": "group_loan: 2 компании в выборке",
+        "related_companies": ["C_GROUPMATE"],
     }
 
 

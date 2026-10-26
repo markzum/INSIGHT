@@ -224,7 +224,7 @@ def score_relevance_tool(args: dict, ctx: ToolContext) -> dict:
     if cluster is None:
         return {"error": "not_found", "cluster_id": args["cluster_id"]}
     profile = build_profile(ctx.directory, args["client_id"])
-    return score_relevance(profile, cluster, ctx.rules).as_dict()
+    return score_relevance(profile, cluster, ctx.rules, ctx.session.role).as_dict()
 
 
 def _party(item) -> dict:

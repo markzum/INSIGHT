@@ -1,7 +1,8 @@
 import pytest
 
 from agent.errors import ClientNotFound, InsightNotFound
-from agent.loop import AgentRuntime, _prepare_draft
+from agent.loop import AgentRuntime, _give_up, _prepare_draft
+from agent.schemas.models import schema_errors
 from agent.planner import plan_messages
 from agent.settings import Settings
 from agent.tools import build_registry
@@ -49,6 +50,17 @@ def test_same_rate_news_differs_for_borrower_and_depositor(runtime: AgentRuntime
     assert loan_rate["priority_score"] > deposit_rate["priority_score"]
 
 
+def test_fx_story_for_borrower_is_not_rewritten_as_rate(runtime: AgentRuntime) -> None:
+    loan = runtime.run_insights("C_LOAN", "2026-09-01", "2026-09-30", top_n=5, role="cfo")
+    ids = {item["cluster_id"] for item in loan}
+    assert "clu_rate" in ids
+    assert "clu_fx" in ids
+    fx = next(item for item in loan if item["cluster_id"] == "clu_fx")
+    text = " ".join(item["text"] for item in fx["why_it_matters"])
+    assert "кредит" not in text
+    assert "отрасл" in text
+
+
 def test_fx_news_ranks_importer_higher(runtime: AgentRuntime) -> None:
     importer = runtime.run_insights("C_IMPORT", "2026-09-01", "2026-09-30", top_n=5)
     domestic = runtime.run_insights("C_DOMESTIC", "2026-09-01", "2026-09-30", top_n=5)
@@ -91,6 +103,28 @@ def test_prepare_draft_owns_id_score_and_source_kind() -> None:
     assert draft["trace_id"] == "tr_1"
     assert draft["sources"][0]["kind"] == "bank_analytics"
     assert 0 <= draft["priority_score"] <= 1
+
+
+def test_schema_repair_keeps_model_sentences() -> None:
+    context = {
+        "client_id": "C_LOAN",
+        "cluster_id": "clu_rate",
+        "title": "Ставка",
+        "summary": "ЦБ сохранил ставку",
+        "trace_id": "tr_1",
+        "sources": [],
+    }
+    draft = {
+        "headline": "Ставка держится, заёмщику это дорого",
+        "why_it_matters": "Платёж по кредиту зависит от ставки ЦБ",
+        "type": "risk",
+    }
+    fixed = _give_up(draft, context, [{"code": "schema", "detail": "нет полей"}], templates=False)
+    assert schema_errors(fixed, "insight.schema.json") == []
+    assert fixed["headline"] == "Ставка держится, заёмщику это дорого"
+    blob = " ".join(item["text"] for item in fixed["why_it_matters"])
+    assert "Платёж по кредиту зависит от ставки ЦБ" in blob
+    assert "У компании подключены кредитные" not in blob
 
 
 def test_plan_wraps_news_as_untrusted_data() -> None:

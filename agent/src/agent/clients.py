@@ -177,6 +177,7 @@ class ClientDirectory:
         self._load_clients(clients_csv)
         self._load_payments(payments_csv)
         self._load_persons(persons_csv)
+        self._index_market()
 
     def _load_clients(self, path: Path) -> None:
         for row in _read_table(path):
@@ -207,6 +208,68 @@ class ClientDirectory:
                 continue
             self.persons_of.setdefault(company, []).append(person)
             self.companies_of_person.setdefault(person, []).append(company)
+
+    def _index_market(self) -> None:
+        buckets: dict[str, list[tuple[str, float]]] = {}
+        labels: dict[str, str] = {}
+        for record in self.clients.values():
+            sector_id, label = self.okved.resolve(record.okved_code)
+            if sector_id == "unknown" or record.revenue is None:
+                continue
+            buckets.setdefault(sector_id, []).append((record.client_id, record.revenue))
+            labels[sector_id] = label
+        for items in buckets.values():
+            items.sort(key=lambda item: (-item[1], item[0]))
+        self.sector_revenue = buckets
+        self.sector_labels = labels
+
+    def market_snapshot(self, client_id: str) -> dict:
+        """Место и доля внутри выборки клиентов банка. Объёма всего рынка в данных нет."""
+        record = self.require(client_id)
+        sector_id, label = self.okved.resolve(record.okved_code)
+        peers = self.sector_revenue.get(sector_id, []) if sector_id != "unknown" else []
+        rank = None
+        share = None
+        if record.revenue is not None and peers:
+            total = sum(amount for _, amount in peers)
+            share = record.revenue / total if total else None
+            for index, (peer_id, _) in enumerate(peers, start=1):
+                if peer_id == client_id:
+                    rank = index
+                    break
+        return {
+            "sector_id": sector_id,
+            "sector_label": label if sector_id != "unknown" else "",
+            "rank": rank,
+            "peers": len(peers),
+            "share": share,
+            "group": self._group_snapshot(record),
+        }
+
+    def _group_snapshot(self, record: ClientRecord) -> dict:
+        empty = {"id": "", "members": 0, "revenue": None, "sectors": [], "sector_share": None}
+        if not record.group_id:
+            return empty
+        members = [self.clients[item] for item in self.by_group.get(record.group_id, []) if item in self.clients]
+        revenues = [item.revenue for item in members if item.revenue is not None]
+        sectors: list[str] = []
+        sector_revenue = 0.0
+        client_sector, _ = self.okved.resolve(record.okved_code)
+        for item in members:
+            sector_id, label = self.okved.resolve(item.okved_code)
+            if sector_id != "unknown" and label not in sectors:
+                sectors.append(label)
+            if sector_id == client_sector and item.revenue is not None:
+                sector_revenue += item.revenue
+        peers = self.sector_revenue.get(client_sector, []) if client_sector != "unknown" else []
+        total = sum(amount for _, amount in peers)
+        return {
+            "id": record.group_id,
+            "members": len(members),
+            "revenue": sum(revenues) if revenues else None,
+            "sectors": sectors,
+            "sector_share": sector_revenue / total if total and sector_revenue else None,
+        }
 
     def get(self, client_id: str) -> ClientRecord | None:
         return self.clients.get(client_id)
